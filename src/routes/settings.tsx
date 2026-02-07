@@ -102,7 +102,7 @@ function SettingsPage() {
 
                 {/* SENSITIVITY SLIDER SECTION */} 
                 <div className="form-control w-full max-w-2xl mx-auto">
-                    <label className="label">
+                    <label className="label" htmlFor="sensitivity-slider">
                         <span className="label-text">Mouse Sensitivity</span>
                         <span className="label-text-alt font-mono">
                         {sensitivity.toFixed(1)}x
@@ -111,6 +111,7 @@ function SettingsPage() {
 
                     <input
                         type="range"
+                        id="sensitivity-slider"
                         min="0.1"
                         max="3.0"
                         step="0.1"
