@@ -38,6 +38,9 @@ export const useRemoteConnection = () => {
 
     const send = useCallback((msg: any) => {
         if (ws?.readyState === WebSocket.OPEN) {
+            if (msg.type === 'move' && ws.bufferedAmount > 100000) {
+                return;
+            }
             ws.send(JSON.stringify(msg));
         }
     }, [ws]);
