@@ -26,6 +26,8 @@ export const useTrackpadGesture = (
     // Refs for tracking state (avoids re-renders during rapid movement)
     const ongoingTouches = useRef<TrackedTouch[]>([]);
     const moved = useRef(false);
+    const pendingMove = useRef({ dx: 0, dy: 0 });
+    const frameScheduled = useRef(false);
     const startTimeStamp = useRef(0);
     const lastEndTimeStamp = useRef(0);
     const releasedCount = useRef(0);
@@ -41,6 +43,24 @@ export const useTrackpadGesture = (
         draggingTimeout.current = null;
         send({ type: 'click', button: 'left', press: false });
     };
+
+    //Queue the movement and send it only once an Animationframe
+    const queueMove = (dx:number , dy:number) => {
+        pendingMove.current.dx += dx;
+        pendingMove.current.dy += dy;
+        if(!frameScheduled.current){
+            frameScheduled.current = true;
+            requestAnimationFrame(()=>{
+                send({
+                    type: 'move',
+                    dx: pendingMove.current.dx,
+                    dy: pendingMove.current.dy,
+                });
+                pendingMove.current = {dx:0,dy:0};
+                frameScheduled.current = false;
+            })
+        }
+    }
 
     const handleTouchStart = (e: React.TouchEvent) => {
         if (ongoingTouches.current.length === 0) {
@@ -147,7 +167,7 @@ export const useTrackpadGesture = (
                 send({ type: 'scroll', dx: -sumX * sensitivity, dy: -sumY * sensitivity });
             } else if (ongoingTouches.current.length === 1 || dragging.current) {
                 // Cursor movement (only in cursor mode with 1 finger, or when dragging)
-                send({ type: 'move', dx: sumX * sensitivity, dy: sumY * sensitivity });
+                queueMove(sumX*sensitivity, sumY*sensitivity);
             }
         }
     };
