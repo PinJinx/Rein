@@ -31,7 +31,6 @@ export const useTrackpadGesture = (
     const pendingMove = useRef({ dx: 0, dy: 0 });
     const frameScheduled = useRef(false);
     const startTimeStamp = useRef(0);
-    const lastEndTimeStamp = useRef(0);
     const releasedCount = useRef(0);
     const dragging = useRef(false);
     const draggingTimeout = useRef<NodeJS.Timeout | null>(null);
@@ -41,13 +40,58 @@ export const useTrackpadGesture = (
     // Helpers
     const findTouchIndex = (id: number) => ongoingTouches.current.findIndex(t => t.identifier === id);
 
+    const processMovement = (sumX: number, sumY: number) => {
+        const moveDx = Math.round(sumX * sensitivity * 10) / 10;
+        const moveDy = Math.round(sumY * sensitivity * 10) / 10;
+        if (dragging.current) {
+            queueMovement(moveDx, moveDy);
+            return;
+        }
+        const invertMult = invertScroll ? -1 : 1;
+        if (!scrollMode && ongoingTouches.current.length === 2) {
+            const dist = getTouchDistance(ongoingTouches.current[0], ongoingTouches.current[1]);
+            const delta = lastPinchDist.current !== null ? dist - lastPinchDist.current : 0;
+            if (pinching.current || Math.abs(delta) > PINCH_THRESHOLD) {
+                pinching.current = true;
+                lastPinchDist.current = dist;
+                send({ type: 'zoom', delta: delta * sensitivity * invertMult });
+            } else {
+                lastPinchDist.current = dist;
+                send({ 
+                    type: 'scroll', 
+                    dx: -sumX * sensitivity * invertMult, 
+                    dy: -sumY * sensitivity * invertMult 
+                });
+            }
+        } else if (scrollMode || ongoingTouches.current.length === 2) {
+            let scrollDx = sumX;
+            let scrollDy = sumY;
+            if (scrollMode) {
+                const absDx = Math.abs(scrollDx);
+                const absDy = Math.abs(scrollDy);
+                if (absDx > absDy * axisThreshold) {
+                    scrollDy = 0;
+                } else if (absDy > absDx * axisThreshold) {
+                    scrollDx = 0;
+                }
+            }
+            send({ 
+                type: 'scroll', 
+                dx: Math.round(-scrollDx * sensitivity * 10 * invertMult) / 10, 
+                dy: Math.round(-scrollDy * sensitivity * 10 * invertMult) / 10 
+            });
+        } else if (ongoingTouches.current.length === 1) {
+            queueMovement(moveDx, moveDy);
+        }
+    };
+
     const handleDraggingTimeout = () => {
         draggingTimeout.current = null;
         send({ type: 'click', button: 'left', press: false });
     };
 
     //Queue the movement and send it only once an Animationframe
-    const queueMove = (dx:number , dy:number) => {
+    const queueMovement = (dx:number , dy:number) => {
         pendingMove.current.dx += dx;
         pendingMove.current.dy += dy;
         if(!frameScheduled.current){
@@ -95,7 +139,6 @@ export const useTrackpadGesture = (
         }
 
         setIsTracking(true);
-        lastEndTimeStamp.current = 0;
 
         // If we're in dragging timeout, convert to actual drag
         if (draggingTimeout.current) {
@@ -151,52 +194,9 @@ export const useTrackpadGesture = (
             tracked.timeStamp = e.timeStamp;
         }
 
-        // Send movement if we've moved and not in timeout period
-        if (moved.current && e.timeStamp - lastEndTimeStamp.current >= TOUCH_TIMEOUT) {
-            // Apply Inversion Factor (Client Side)
-            const invertMult = invertScroll ? -1 : 1;
-
-            if (!scrollMode && ongoingTouches.current.length === 2) {
-                const dist = getTouchDistance(ongoingTouches.current[0], ongoingTouches.current[1]);
-                const delta = lastPinchDist.current !== null ? dist - lastPinchDist.current : 0;
-                
-                if (pinching.current || Math.abs(delta) > PINCH_THRESHOLD) {
-                    pinching.current = true;
-                    lastPinchDist.current = dist;
-                    // Zoom inversion typically matches scroll inversion preference
-                    send({ type: 'zoom', delta: delta * sensitivity * invertMult });
-                } else {
-                    lastPinchDist.current = dist;
-                    send({ 
-                        type: 'scroll', 
-                        dx: -sumX * sensitivity * invertMult, 
-                        dy: -sumY * sensitivity * invertMult 
-                    });
-                }
-            } else if (scrollMode) {
-                // Scroll mode: single finger scrolls, or two-finger scroll in cursor mode
-                let scrollDx = sumX;
-                let scrollDy = sumY;
-                const absDx = Math.abs(scrollDx);
-                const absDy = Math.abs(scrollDy);
-                if (scrollMode) {
-                    if (absDx > absDy * axisThreshold) {
-                        // Horizontal is dominant - ignore vertical
-                        scrollDy = 0;
-                    } else if (absDy > absDx * axisThreshold) {
-                        // Vertical is dominant - ignore horizontal 
-                        scrollDx = 0;
-                    }
-                }
-                send({ 
-                    type: 'scroll', 
-                    dx: Math.round(-scrollDx * sensitivity * 10 * invertMult) / 10 , 
-                    dy: Math.round(-scrollDy * sensitivity * 10 * invertMult) / 10 
-                });
-            } else if (ongoingTouches.current.length === 1 || dragging.current) {
-                // Cursor movement (only in cursor mode with 1 finger, or when dragging)
-                queueMove(sumX*sensitivity, sumY*sensitivity);
-            }
+        // Send movement if we've moved
+        if (moved.current) {
+            processMovement(sumX, sumY);
         }
     };
 
@@ -211,8 +211,6 @@ export const useTrackpadGesture = (
                 releasedCount.current += 1;
             }
         }
-
-        lastEndTimeStamp.current = e.timeStamp;
 
         if (ongoingTouches.current.length < 2) {
             lastPinchDist.current = null;
