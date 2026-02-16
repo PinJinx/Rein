@@ -28,10 +28,10 @@ export class InputHandler {
                     Number.isFinite(msg.dy)
                 ) {
                     const currentPos = await mouse.getPosition();
-                    
+
                     await mouse.setPosition(new Point(
-                        currentPos.x + msg.dx, 
-                        currentPos.y + msg.dy
+                        Math.round(currentPos.x + msg.dx),
+                        Math.round(currentPos.y + msg.dy)
                     ));
                 }
                 break;
@@ -48,23 +48,25 @@ export class InputHandler {
                 break;
 
             case 'scroll':
-                const promises: Promise<void>[] = [];
+                const promises: any[] = [];
 
                 // Vertical scroll
-                if (typeof msg.dy === 'number' && msg.dy !== 0) {
-                    if (msg.dy > 0) {
-                        promises.push(mouse.scrollDown(msg.dy));
+                if (typeof msg.dy === 'number' && Math.round(msg.dy) !== 0) {
+                    const amount = Math.round(msg.dy);
+                    if (amount > 0) {
+                        promises.push(mouse.scrollDown(amount));
                     } else {
-                        promises.push(mouse.scrollUp(-msg.dy));
+                        promises.push(mouse.scrollUp(-amount));
                     }
                 }
 
                 // Horizontal scroll
-                if (typeof msg.dx === 'number' && msg.dx !== 0) {
-                    if (msg.dx > 0) {
-                        promises.push(mouse.scrollRight(msg.dx));
+                if (typeof msg.dx === 'number' && Math.round(msg.dx) !== 0) {
+                    const amount = Math.round(msg.dx);
+                    if (amount > 0) {
+                        promises.push(mouse.scrollRight(amount));
                     } else {
-                        promises.push(mouse.scrollLeft(-msg.dx));
+                        promises.push(mouse.scrollLeft(-amount));
                     }
                 }
 
@@ -75,20 +77,26 @@ export class InputHandler {
 
             case 'zoom':
                 if (msg.delta !== undefined && msg.delta !== 0) {
-                    const sensitivityFactor = 0.5; 
+                    const sensitivityFactor = 0.5;
                     const MAX_ZOOM_STEP = 5;
 
                     const scaledDelta =
                         Math.sign(msg.delta) *
                         Math.min(Math.abs(msg.delta) * sensitivityFactor, MAX_ZOOM_STEP);
 
-                    const amount = -scaledDelta;
-                    
-                    await keyboard.pressKey(Key.LeftControl);
-                    try {
-                        await mouse.scrollDown(amount);
-                    } finally {
-                        await keyboard.releaseKey(Key.LeftControl);
+                    const amount = Math.round(-scaledDelta);
+
+                    if (amount !== 0) {
+                        await keyboard.pressKey(Key.LeftControl);
+                        try {
+                            if (amount > 0) {
+                                await mouse.scrollDown(amount);
+                            } else {
+                                await mouse.scrollUp(-amount);
+                            }
+                        } finally {
+                            await keyboard.releaseKey(Key.LeftControl);
+                        }
                     }
                 }
                 break;
