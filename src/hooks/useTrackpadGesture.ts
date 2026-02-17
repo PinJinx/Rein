@@ -34,17 +34,35 @@ export const useTrackpadGesture = (
     const draggingTimeout = useRef<NodeJS.Timeout | null>(null);
     const lastPinchDist = useRef<number | null>(null);
     const pinching = useRef(false);
+    const pendingMove = useRef({ dx: 0, dy: 0 });
+    const frameScheduled = useRef(false);
 
     // Helpers
     const findTouchIndex = (id: number) => ongoingTouches.current.findIndex(t => t.identifier === id);
 
+    //Queue the movement and send it only once an Animationframe
+    const queueMovement = (dx:number , dy:number) => {
+        pendingMove.current.dx += dx;
+        pendingMove.current.dy += dy;
+        if(!frameScheduled.current){
+            frameScheduled.current = true;
+            requestAnimationFrame(()=>{
+                send({
+                    type: 'move',
+                    dx: pendingMove.current.dx,
+                    dy: pendingMove.current.dy,
+                });
+                pendingMove.current.dx = 0;
+                pendingMove.current.dy = 0;
+                frameScheduled.current = false;
+            })
+        }
+    }
     const processMovement = (sumX: number, sumY: number) => {
+        const dx = Math.round(sumX * sensitivity * 10) / 10;
+        const dy =  Math.round(sumY * sensitivity * 10) / 10;
         if (dragging.current) {
-            send({ 
-                type: 'move', 
-                dx: Math.round(sumX * sensitivity * 10) / 10, 
-                dy: Math.round(sumY * sensitivity * 10) / 10 
-            });
+            queueMovement(dx,dy);
             return;
         }
         const invertMult = invertScroll ? -1 : 1;
@@ -81,11 +99,7 @@ export const useTrackpadGesture = (
                 dy: Math.round(-scrollDy * sensitivity * 10 * invertMult) / 10 
             });
         } else if (ongoingTouches.current.length === 1) {
-            send({ 
-                type: 'move', 
-                dx: Math.round(sumX * sensitivity * 10) / 10, 
-                dy: Math.round(sumY * sensitivity * 10) / 10 
-            });
+            queueMovement(dx,dy);
         }
     };
 
