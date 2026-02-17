@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import fs from 'fs';
+import { writeFile } from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -16,27 +17,45 @@ const EXPIRY_MS = 10 * 24 * 60 * 60 * 1000; // 10 days
 
 let tokens: TokenEntry[] = [];
 let lastSaveTime = 0;
+let isSaving = false;
 const SAVE_THROTTLE_MS = 60 * 1000; // 1 minute
+
+function validateTokens(data: any): TokenEntry[] {
+    if (!Array.isArray(data)) return [];
+    return data.filter(t =>
+        typeof t.token === 'string' &&
+        typeof t.lastUsed === 'number' &&
+        typeof t.createdAt === 'number'
+    );
+}
 
 function load(): void {
     try {
         if (fs.existsSync(TOKENS_FILE)) {
-            tokens = JSON.parse(fs.readFileSync(TOKENS_FILE, 'utf-8'));
+            const raw = fs.readFileSync(TOKENS_FILE, 'utf-8');
+            tokens = validateTokens(JSON.parse(raw));
         }
     } catch {
         tokens = [];
     }
 }
 
-function save(force = false): void {
+async function save(force = false): Promise<void> {
     const now = Date.now();
     if (!force && (now - lastSaveTime) < SAVE_THROTTLE_MS) return;
+    if (isSaving) return;
 
+    isSaving = true;
     try {
-        fs.writeFileSync(TOKENS_FILE, JSON.stringify(tokens, null, 2));
+        await writeFile(TOKENS_FILE, JSON.stringify(tokens, null, 2), {
+            encoding: 'utf-8',
+            mode: 0o600 // Restricted to owner only
+        });
         lastSaveTime = now;
     } catch (e) {
         console.error('Failed to persist tokens:', e);
+    } finally {
+        isSaving = false;
     }
 }
 

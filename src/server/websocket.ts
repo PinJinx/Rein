@@ -24,6 +24,7 @@ function isLocalhost(request: IncomingMessage): boolean {
     return addr === '127.0.0.1' || addr === '::1' || addr === '::ffff:127.0.0.1';
 }
 
+// server: any is used to support Vite's dynamic httpServer types (http, https, http2)
 export function createWsServer(server: any) {
     const wss = new WebSocketServer({ noServer: true });
     const inputHandler = new InputHandler();
@@ -67,7 +68,11 @@ export function createWsServer(server: any) {
     });
 
     wss.on('connection', (ws: WebSocket, _request: IncomingMessage, token: string | null, isLocal: boolean) => {
-        if (token) storeToken(token);
+        // Localhost: only store token if it's already known (trusted scan)
+        // Remote: token is already validated in the upgrade handler
+        if (token && (isKnownToken(token) || !isLocal)) {
+            storeToken(token);
+        }
 
         ws.send(JSON.stringify({ type: 'connected', serverIp: LAN_IP }));
 
@@ -83,7 +88,10 @@ export function createWsServer(server: any) {
 
                 const msg = JSON.parse(raw);
 
-                if (token) touchToken(token);
+                // PERFORMANCE: Only touch if it's an actual command (not ping/ip)
+                if (token && msg.type !== 'get-ip' && msg.type !== 'generate-token') {
+                    touchToken(token);
+                }
 
                 if (msg.type === 'get-ip') {
                     ws.send(JSON.stringify({ type: 'server-ip', ip: LAN_IP }));
