@@ -67,7 +67,7 @@ export const useRemoteConnection = () => {
     const send = useCallback((msg: any) => {
         if (wsRef.current?.readyState === WebSocket.OPEN) {
             //Drop movement when there is a lot of packets left to be processed
-            if(msg.type == "move" && wsRef.current.bufferedAmount > 10000) return; 
+            if(msg.type === "move" && wsRef.current.bufferedAmount > 10000) return; 
             wsRef.current.send(JSON.stringify(msg));
         }
     }, []);

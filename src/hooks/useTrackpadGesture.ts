@@ -36,6 +36,7 @@ export const useTrackpadGesture = (
     const pinching = useRef(false);
     const pendingMove = useRef({ dx: 0, dy: 0 });
     const frameScheduled = useRef(false);
+    const rafId = useRef(0);
 
     // Helpers
     const findTouchIndex = (id: number) => ongoingTouches.current.findIndex(t => t.identifier === id);
@@ -46,7 +47,7 @@ export const useTrackpadGesture = (
         pendingMove.current.dy += dy;
         if(!frameScheduled.current){
             frameScheduled.current = true;
-            requestAnimationFrame(()=>{
+            rafId.current = requestAnimationFrame(()=>{
                 send({
                     type: 'move',
                     dx: pendingMove.current.dx,
@@ -255,7 +256,16 @@ export const useTrackpadGesture = (
                     }
                 }
             }
-
+            // Flush or cancel any pending batched move
+            if (frameScheduled.current) {
+                cancelAnimationFrame(rafId.current);
+                if (pendingMove.current.dx !== 0 || pendingMove.current.dy !== 0) {
+                    send({ type: 'move', dx: pendingMove.current.dx, dy: pendingMove.current.dy });
+                }
+                pendingMove.current.dx = 0;
+                pendingMove.current.dy = 0;
+                frameScheduled.current = false;
+            }
             releasedCount.current = 0;
         }
     };
