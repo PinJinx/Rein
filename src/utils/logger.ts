@@ -9,7 +9,12 @@ const HOMEDIR = os.homedir();
 const LOG_DIR = path.join(HOMEDIR, '.rein'); 
 const LOG_FILE = path.join(LOG_DIR, 'log.txt');
 // Ensure the log directory exists before Winston tries to open the file
-fs.mkdirSync(LOG_DIR, { recursive: true });
+try {
+  fs.mkdirSync(LOG_DIR, { recursive: true });
+} catch (err: any) {
+  // If we can't create the log dir, fall back to stderr only — don't crash.
+  process.stderr.write(`[logger] Failed to create log directory ${LOG_DIR}: ${err?.message}\n`);
+}
 
 // Ensure the logger handles uncaught exceptions and rejections
 const logger = winston.createLogger({
