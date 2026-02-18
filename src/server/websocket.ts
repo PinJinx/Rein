@@ -5,6 +5,7 @@ import os from 'os';
 import fs from 'fs';
 import { IncomingMessage } from 'http';
 import { Socket } from 'net';
+import logger from '../utils/logger';
 
 function getLocalIp(): string {
     const nets = os.networkInterfaces();
@@ -31,6 +32,8 @@ export function createWsServer(server: any) {
     const LAN_IP = getLocalIp();
     const MAX_PAYLOAD_SIZE = 10 * 1024; // 10KB limit
 
+    logger.info('WebSocket server initialized');
+
     server.on('upgrade', (request: IncomingMessage, socket: Socket, head: Buffer) => {
         const url = new URL(request.url || '', `http://${request.headers.host}`);
 
@@ -39,8 +42,10 @@ export function createWsServer(server: any) {
         const token = url.searchParams.get('token');
         const local = isLocalhost(request);
 
-        // Localhost is always allowed (settings page, IP detection, etc.)
+        logger.info(`Upgrade request received from ${request.socket.remoteAddress}`);
+
         if (local) {
+            logger.info('Localhost connection allowed');
             wss.handleUpgrade(request, socket, head, (ws) => {
                 wss.emit('connection', ws, request, token, true);
             });
@@ -49,6 +54,7 @@ export function createWsServer(server: any) {
 
         // Remote connections require a token
         if (!token) {
+            logger.warn('Unauthorized connection attempt: No token provided');
             socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
             socket.destroy();
             return;
@@ -57,32 +63,51 @@ export function createWsServer(server: any) {
 
         // Validate against known tokens
         if (!isKnownToken(token)) {
+            logger.warn('Unauthorized connection attempt: Invalid token');
             socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
             socket.destroy();
             return;
         }
+
+        logger.info('Remote connection authenticated successfully');
 
         wss.handleUpgrade(request, socket, head, (ws) => {
             wss.emit('connection', ws, request, token, false);
         });
     });
 
-    wss.on('connection', (ws: WebSocket, _request: IncomingMessage, token: string | null, isLocal: boolean) => {
+    wss.on('connection', (ws: WebSocket, request: IncomingMessage, token: string | null, isLocal: boolean) => {
         // Localhost: only store token if it's already known (trusted scan)
         // Remote: token is already validated in the upgrade handler
+        logger.info(`Client connected from ${request.socket.remoteAddress}`);
+
         if (token && (isKnownToken(token) || !isLocal)) {
             storeToken(token);
         }
 
         ws.send(JSON.stringify({ type: 'connected', serverIp: LAN_IP }));
 
-        ws.on('message', async (data: string) => {
+        let lastRaw = '';
+        let lastTime = 0;
+        const DUPLICATE_WINDOW_MS = 100;
+
+        ws.on('message', async (data: WebSocket.RawData) => {
             try {
                 const raw = data.toString();
+                const now = Date.now();
 
-                // Prevent JSON DoS
+                // Prevent rapid identical message spam
+                if (raw === lastRaw && (now - lastTime) < DUPLICATE_WINDOW_MS) {
+                    return;
+                }
+
+                lastRaw = raw;
+                lastTime = now;
+
+                logger.info(`Received message (${raw.length} bytes)`);
+
                 if (raw.length > MAX_PAYLOAD_SIZE) {
-                    console.warn('Payload too large, rejecting message.');
+                    logger.warn('Payload too large, rejecting message.');
                     return;
                 }
 
@@ -100,6 +125,7 @@ export function createWsServer(server: any) {
 
                 if (msg.type === 'generate-token') {
                     if (!isLocal) {
+                        logger.warn('Token generation attempt from non-localhost');
                         ws.send(JSON.stringify({ type: 'auth-error', error: 'Only localhost can generate tokens' }));
                         return;
                     }
@@ -109,6 +135,9 @@ export function createWsServer(server: any) {
                     if (!tokenToReturn) {
                         tokenToReturn = generateToken();
                         storeToken(tokenToReturn);
+                        logger.info('New token generated');
+                    } else {
+                        logger.info('Existing active token returned');
                     }
 
                     ws.send(JSON.stringify({ type: 'token-generated', token: tokenToReturn }));
@@ -123,24 +152,30 @@ export function createWsServer(server: any) {
                             : {};
                         const newConfig = { ...current, ...msg.config };
                         fs.writeFileSync(configPath, JSON.stringify(newConfig, null, 2));
+
+                        logger.info('Server configuration updated');
                         ws.send(JSON.stringify({ type: 'config-updated', success: true }));
                     } catch (e) {
-                        console.error('Failed to update config:', e);
+                        logger.error(`Failed to update config: ${String(e)}`);
                         ws.send(JSON.stringify({ type: 'config-updated', success: false, error: String(e) }));
                     }
                     return;
                 }
 
                 await inputHandler.handleMessage(msg as InputMessage);
-            } catch (err) {
-                console.error('Error processing message:', err);
+
+            } catch (err: any) {
+                logger.error(`Error processing message: ${err?.message || err}`);
             }
         });
 
-        ws.on('close', () => { /* client disconnected */ });
+        ws.on('close', () => {  
+            logger.info('Client disconnected');
+        });
 
-        ws.onerror = (error) => {
+        ws.on('error', (error: Error) => {
             console.error('WebSocket error:', error);
-        };
+            logger.error(`WebSocket error: ${error.message}`);
+        });
     });
 }
