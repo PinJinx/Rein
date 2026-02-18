@@ -35,8 +35,7 @@ const logger = winston.createLogger({
   ]
 });
 
-// If we're not in production then log to the `console` with the format:
-// `${info.level}: ${info.message} JSON.stringify({ ...rest }) `
+// If we're not in production then log to the `console`
 if (process.env.NODE_ENV !== 'production') {
   logger.add(new winston.transports.Console({
     format: winston.format.combine(
@@ -47,18 +46,18 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 // Optional: Intercept standard console.log and redirect to winston
-// This ensures "all console output" is captured as requested.
 const originalConsoleLog = console.log;
 const originalConsoleError = console.error;
 
+const serialize = (a: any): string =>
+    typeof a === 'string' ? a : JSON.stringify(a);
+
 console.log = (...args: any[]) => {
-    logger.info(args.map(a => JSON.stringify(a)).join(' '));
-    originalConsoleLog.apply(console, args);
+    logger.info(args.map(serialize).join(' '));
 };
 
 console.error = (...args: any[]) => {
-    logger.error(args.map(a => JSON.stringify(a)).join(' '));
-    originalConsoleError.apply(console, args);
+    logger.error(args.map(serialize).join(' '));
 };
 
 export default logger;
