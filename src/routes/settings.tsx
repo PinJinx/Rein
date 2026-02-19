@@ -13,7 +13,7 @@ function SettingsPage() {
     const [originalPort] = useState(String(CONFIG.FRONTEND_PORT));
 
     const serverConfigChanged =
-        frontendPort !== originalPort;  
+        frontendPort !== originalPort;
 
     // Client Side Settings (LocalStorage)
     const [invertScroll, setInvertScroll] = useState(() => {
@@ -22,7 +22,7 @@ function SettingsPage() {
             const saved = localStorage.getItem('rein_invert');
             return saved === 'true';
         } catch {
-            return false;   
+            return false;
         }
     });
 
