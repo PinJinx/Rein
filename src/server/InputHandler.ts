@@ -25,19 +25,34 @@ export class InputHandler {
         mouse.config.mouseSpeed = 1000;
     }
 
+    private isFiniteNumber(value: unknown): value is number {
+        return typeof value === 'number' && Number.isFinite(value);
+    }
+
+    private clamp(value: number, min: number, max: number): number {
+        return Math.max(min, Math.min(max, value));
+    }
+
     async handleMessage(msg: InputMessage) {
-        // Validation: Text length sanitation
-        if (msg.text && msg.text.length > 500) {
+        if (msg.text && typeof msg.text === 'string' && msg.text.length > 500) {
             msg.text = msg.text.substring(0, 500);
         }
 
-        // Validation: Sane bounds for coordinates
         const MAX_COORD = 2000;
-        if (typeof msg.dx === 'number' && Number.isFinite(msg.dx)) {
-            msg.dx = Math.max(-MAX_COORD, Math.min(MAX_COORD, msg.dx));
+        if (this.isFiniteNumber(msg.dx)) {
+            msg.dx = this.clamp(msg.dx, -MAX_COORD, MAX_COORD);
+        } else {
+            msg.dx = 0;
         }
-        if (typeof msg.dy === 'number' && Number.isFinite(msg.dy)) {
-            msg.dy = Math.max(-MAX_COORD, Math.min(MAX_COORD, msg.dy));
+        if (this.isFiniteNumber(msg.dy)) {
+            msg.dy = this.clamp(msg.dy, -MAX_COORD, MAX_COORD);
+        } else {
+            msg.dy = 0;
+        }
+        if (this.isFiniteNumber(msg.delta)) {
+            msg.delta = this.clamp(msg.delta, -MAX_COORD, MAX_COORD);
+        } else {
+            msg.delta = 0;
         }
 
         // Throttling: Limit high-frequency events to ~125fps (8ms)
@@ -98,8 +113,9 @@ export class InputHandler {
                 }
                 break;
 
-            case 'click':
-                if (msg.button) {
+            case 'click': {
+                const VALID_BUTTONS = ['left', 'right', 'middle'];
+                if (msg.button && VALID_BUTTONS.includes(msg.button)) {
                     const btn =
                         msg.button === 'left'
                             ? Button.LEFT
@@ -114,26 +130,28 @@ export class InputHandler {
                     }
                 }
                 break;
+            }
 
             case 'scroll': {
+                const MAX_SCROLL = 100;
                 const promises: Promise<void>[] = [];
 
                 // Vertical scroll
-                if (typeof msg.dy === 'number' && Math.round(msg.dy) !== 0) {
-                    const amount = Math.round(msg.dy);
+                if (this.isFiniteNumber(msg.dy) && Math.round(msg.dy) !== 0) {
+                    const amount = this.clamp(Math.round(msg.dy), -MAX_SCROLL, MAX_SCROLL);
                     if (amount > 0) {
                         promises.push(mouse.scrollDown(amount).then(() => { }));
-                    } else {
+                    } else if (amount < 0) {
                         promises.push(mouse.scrollUp(-amount).then(() => { }));
                     }
                 }
 
                 // Horizontal scroll
-                if (typeof msg.dx === 'number' && Math.round(msg.dx) !== 0) {
-                    const amount = Math.round(msg.dx);
+                if (this.isFiniteNumber(msg.dx) && Math.round(msg.dx) !== 0) {
+                    const amount = this.clamp(Math.round(msg.dx), -MAX_SCROLL, MAX_SCROLL);
                     if (amount > 0) {
                         promises.push(mouse.scrollRight(amount).then(() => { }));
-                    } else {
+                    } else if (amount < 0) {
                         promises.push(mouse.scrollLeft(-amount).then(() => { }));
                     }
                 }
@@ -145,7 +163,7 @@ export class InputHandler {
             }
 
             case 'zoom':
-                if (msg.delta !== undefined && msg.delta !== 0) {
+                if (this.isFiniteNumber(msg.delta) && msg.delta !== 0) {
                     const sensitivityFactor = 0.5;
                     const MAX_ZOOM_STEP = 5;
 
@@ -174,7 +192,7 @@ export class InputHandler {
                 break;
 
             case 'key':
-                if (msg.key) {
+                if (msg.key && typeof msg.key === 'string' && msg.key.length <= 50) {
                     console.log(`Processing key: ${msg.key}`);
                     const nutKey = KEY_MAP[msg.key.toLowerCase()];
 
@@ -189,7 +207,7 @@ export class InputHandler {
                 break;
 
             case 'combo':
-                if (msg.keys && msg.keys.length > 0) {
+                if (msg.keys && Array.isArray(msg.keys) && msg.keys.length > 0 && msg.keys.length <= 10) {
                     const nutKeys: (Key | string)[] = [];
 
                     for (const k of msg.keys) {
@@ -237,7 +255,7 @@ export class InputHandler {
                 break;
 
             case 'text':
-                if (msg.text) {
+                if (msg.text && typeof msg.text === 'string') {
                     await keyboard.type(msg.text);
                 }
                 break;

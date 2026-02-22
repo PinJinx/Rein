@@ -146,11 +146,39 @@ export function createWsServer(server: any) {
 
                 if (msg.type === 'update-config') {
                     try {
+                        if (!msg.config || typeof msg.config !== 'object' || Array.isArray(msg.config)) {
+                            ws.send(JSON.stringify({ type: 'config-updated', success: false, error: 'Invalid config payload' }));
+                            return;
+                        }
+
+                        const SERVER_CONFIG_KEYS = ['host', 'frontendPort', 'address'];
+                        const filtered: Record<string, unknown> = {};
+
+                        for (const key of SERVER_CONFIG_KEYS) {
+                            if (!(key in msg.config)) continue;
+
+                            if (key === 'frontendPort') {
+                                const port = Number(msg.config[key]);
+                                if (!Number.isFinite(port) || port < 1 || port > 65535 || Math.floor(port) !== port) {
+                                    ws.send(JSON.stringify({ type: 'config-updated', success: false, error: 'Invalid port number (must be 1–65535)' }));
+                                    return;
+                                }
+                                filtered[key] = port;
+                            } else if (typeof msg.config[key] === 'string' && msg.config[key].length <= 255) {
+                                filtered[key] = msg.config[key];
+                            }
+                        }
+
+                        if (Object.keys(filtered).length === 0) {
+                            ws.send(JSON.stringify({ type: 'config-updated', success: false, error: 'No valid config keys provided' }));
+                            return;
+                        }
+
                         const configPath = './src/server-config.json';
                         const current = fs.existsSync(configPath)
                             ? JSON.parse(fs.readFileSync(configPath, 'utf-8'))
                             : {};
-                        const newConfig = { ...current, ...msg.config };
+                        const newConfig = { ...current, ...filtered };
                         fs.writeFileSync(configPath, JSON.stringify(newConfig, null, 2));
 
                         logger.info('Server configuration updated');
@@ -159,6 +187,12 @@ export function createWsServer(server: any) {
                         logger.error(`Failed to update config: ${String(e)}`);
                         ws.send(JSON.stringify({ type: 'config-updated', success: false, error: String(e) }));
                     }
+                    return;
+                }
+
+                const VALID_INPUT_TYPES = ['move', 'click', 'scroll', 'key', 'text', 'zoom', 'combo'];
+                if (!msg.type || !VALID_INPUT_TYPES.includes(msg.type)) {
+                    logger.warn(`Unknown message type: ${msg.type}`);
                     return;
                 }
 
