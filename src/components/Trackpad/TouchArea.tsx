@@ -29,7 +29,15 @@ export const TouchArea: React.FC<TouchAreaProps> = ({ scrollMode, isTracking, ha
             onTouchEnd={handlers.onTouchEnd}
             onMouseDown={handlePreventFocus}
         >
-            <div className={`absolute top-0 left-0 w-full h-1 ${status === 'connected' ? 'bg-success' : 'bg-error'}`} />
+            {/* Status strip at very top */}
+            <div style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 3,
+                background: status === "connected" ? "#22c55e" : status === "connecting" ? "#f59e0b" : "#ef4444",
+            }} />
 
             <div className="text-neutral-600 text-center pointer-events-none">
                 <div className="text-4xl mb-2 opacity-20">
