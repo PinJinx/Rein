@@ -1,22 +1,22 @@
 // src/utils/logger.ts
 
-import fs from "node:fs";
-import os from "node:os";
-import path from "node:path";
-import winston from "winston";
+import fs from "node:fs"
+import os from "node:os"
+import path from "node:path"
+import winston from "winston"
 
 // dynamic log path (similar to logPath() requirement)
-const HOMEDIR = os.homedir();
-const LOG_DIR = path.join(HOMEDIR, ".rein");
-const LOG_FILE = path.join(LOG_DIR, "log.txt");
+const HOMEDIR = os.homedir()
+const LOG_DIR = path.join(HOMEDIR, ".rein")
+const LOG_FILE = path.join(LOG_DIR, "log.txt")
 // Ensure the log directory exists before Winston tries to open the file
 try {
-	fs.mkdirSync(LOG_DIR, { recursive: true });
+	fs.mkdirSync(LOG_DIR, { recursive: true })
 } catch (err: unknown) {
 	// If we can't create the log dir, fall back to stderr only — don't crash.
 	process.stderr.write(
 		`[logger] Failed to create log directory ${LOG_DIR}: ${err instanceof Error ? err.message : String(err)}\n`,
-	);
+	)
 }
 
 // Ensure the logger handles uncaught exceptions and rejections
@@ -37,7 +37,7 @@ const logger = winston.createLogger({
 	],
 	exceptionHandlers: [new winston.transports.File({ filename: LOG_FILE })],
 	rejectionHandlers: [new winston.transports.File({ filename: LOG_FILE })],
-});
+})
 
 // If we're not in production then log to the `console`
 if (process.env.NODE_ENV !== "production") {
@@ -48,22 +48,22 @@ if (process.env.NODE_ENV !== "production") {
 				winston.format.simple(),
 			),
 		}),
-	);
+	)
 }
 
 // Optional: Intercept standard console.log and redirect to winston
-const _originalConsoleLog = console.log;
-const _originalConsoleError = console.error;
+const _originalConsoleLog = console.log
+const _originalConsoleError = console.error
 
 const serialize = (a: unknown): string =>
-	typeof a === "string" ? a : JSON.stringify(a);
+	typeof a === "string" ? a : JSON.stringify(a)
 
 console.log = (...args: unknown[]) => {
-	logger.info(args.map(serialize).join(" "));
-};
+	logger.info(args.map(serialize).join(" "))
+}
 
 console.error = (...args: unknown[]) => {
-	logger.error(args.map(serialize).join(" "));
-};
+	logger.error(args.map(serialize).join(" "))
+}
 
-export default logger;
+export default logger
