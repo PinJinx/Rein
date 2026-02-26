@@ -106,7 +106,8 @@ export function createWsServer(server: unknown) {
 
 			let lastRaw = ""
 			let lastTime = 0
-			const DUPLICATE_WINDOW_MS = 100
+			const DUPLICATE_WINDOW_MS = 10
+			let lastTokenTouch = 0
 
 			ws.on("message", async (data: WebSocket.RawData) => {
 				try {
@@ -121,7 +122,6 @@ export function createWsServer(server: unknown) {
 					lastRaw = raw
 					lastTime = now
 
-					logger.info(`Received message (${raw.length} bytes)`)
 
 					if (raw.length > MAX_PAYLOAD_SIZE) {
 						logger.warn("Payload too large, rejecting message.")
@@ -130,9 +130,12 @@ export function createWsServer(server: unknown) {
 
 					const msg = JSON.parse(raw)
 
-					// PERFORMANCE: Only touch if it's an actual command (not ping/ip)
+					// Throttle token touch to once per second — avoids crypto comparison on every event
 					if (token && msg.type !== "get-ip" && msg.type !== "generate-token") {
-						touchToken(token)
+						if (now - lastTokenTouch > 1000) {
+							lastTokenTouch = now
+							touchToken(token)
+						}
 					}
 
 					if (msg.type === "get-ip") {
@@ -267,8 +270,7 @@ export function createWsServer(server: unknown) {
 					await inputHandler.handleMessage(msg as InputMessage)
 				} catch (err: unknown) {
 					logger.error(
-						`Error processing message: ${
-							err instanceof Error ? err.message : String(err)
+						`Error processing message: ${err instanceof Error ? err.message : String(err)
 						}`,
 					)
 				}
