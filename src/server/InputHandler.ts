@@ -34,236 +34,238 @@ export class InputHandler {
 	}
 
 	async handleMessage(msg: InputMessage) {
-		if (msg.text && typeof msg.text === 'string' && msg.text.length > 500) {
-			msg.text = msg.text.substring(0, 500);
+		if (msg.text && typeof msg.text === "string" && msg.text.length > 500) {
+			msg.text = msg.text.substring(0, 500)
 		}
 
-		const MAX_COORD = 2000;
+		const MAX_COORD = 2000
 		if (this.isFiniteNumber(msg.dx)) {
-			msg.dx = this.clamp(msg.dx, -MAX_COORD, MAX_COORD);
+			msg.dx = this.clamp(msg.dx, -MAX_COORD, MAX_COORD)
 		} else {
-			msg.dx = 0;
+			msg.dx = 0
 		}
 		if (this.isFiniteNumber(msg.dy)) {
-			msg.dy = this.clamp(msg.dy, -MAX_COORD, MAX_COORD);
+			msg.dy = this.clamp(msg.dy, -MAX_COORD, MAX_COORD)
 		} else {
-			msg.dy = 0;
+			msg.dy = 0
 		}
 		if (this.isFiniteNumber(msg.delta)) {
-			msg.delta = this.clamp(msg.delta, -MAX_COORD, MAX_COORD);
+			msg.delta = this.clamp(msg.delta, -MAX_COORD, MAX_COORD)
 		} else {
-			msg.delta = 0;
+			msg.delta = 0
 		}
 
 		// Throttling: Limit high-frequency events to ~125fps (8ms)
-		if (msg.type === 'move') {
-			const now = Date.now();
+		if (msg.type === "move") {
+			const now = Date.now()
 			if (now - this.lastMoveTime < 8) {
-				this.pendingMove = msg;
+				this.pendingMove = msg
 				if (!this.moveTimer) {
 					this.moveTimer = setTimeout(() => {
-						this.moveTimer = null;
+						this.moveTimer = null
 						if (this.pendingMove) {
-							const pending = this.pendingMove;
-							this.pendingMove = null;
+							const pending = this.pendingMove
+							this.pendingMove = null
 							this.handleMessage(pending).catch((err) => {
-								console.error('Error processing pending move event:', err);
-							});
+								console.error("Error processing pending move event:", err)
+							})
 						}
-					}, 8);
+					}, 8)
 				}
-				return;
+				return
 			}
-			this.lastMoveTime = now;
-		} else if (msg.type === 'scroll') {
-			const now = Date.now();
+			this.lastMoveTime = now
+		} else if (msg.type === "scroll") {
+			const now = Date.now()
 			if (now - this.lastScrollTime < 8) {
-				this.pendingScroll = msg;
+				this.pendingScroll = msg
 				if (!this.scrollTimer) {
 					this.scrollTimer = setTimeout(() => {
-						this.scrollTimer = null;
+						this.scrollTimer = null
 						if (this.pendingScroll) {
-							const pending = this.pendingScroll;
-							this.pendingScroll = null;
+							const pending = this.pendingScroll
+							this.pendingScroll = null
 							this.handleMessage(pending).catch((err) => {
-								console.error('Error processing pending move event:', err);
-							});
+								console.error("Error processing pending move event:", err)
+							})
 						}
-					}, 8);
+					}, 8)
 				}
-				return;
+				return
 			}
-			this.lastScrollTime = now;
+			this.lastScrollTime = now
 		}
 
 		switch (msg.type) {
-			case 'move':
+			case "move":
 				if (
-					typeof msg.dx === 'number' &&
-					typeof msg.dy === 'number' &&
+					typeof msg.dx === "number" &&
+					typeof msg.dy === "number" &&
 					Number.isFinite(msg.dx) &&
 					Number.isFinite(msg.dy)
 				) {
-					const currentPos = await mouse.getPosition();
+					const currentPos = await mouse.getPosition()
 
-					await mouse.setPosition(new Point(
-						Math.round(currentPos.x + msg.dx),
-						Math.round(currentPos.y + msg.dy)
-					));
+					await mouse.setPosition(
+						new Point(
+							Math.round(currentPos.x + msg.dx),
+							Math.round(currentPos.y + msg.dy),
+						),
+					)
 				}
-				break;
+				break
 
-			case 'click': {
-				const VALID_BUTTONS = ['left', 'right', 'middle'];
+			case "click": {
+				const VALID_BUTTONS = ["left", "right", "middle"]
 				if (msg.button && VALID_BUTTONS.includes(msg.button)) {
 					const btn =
-						msg.button === 'left'
+						msg.button === "left"
 							? Button.LEFT
-							: msg.button === 'right'
+							: msg.button === "right"
 								? Button.RIGHT
-								: Button.MIDDLE;
+								: Button.MIDDLE
 
 					if (msg.press) {
-						await mouse.pressButton(btn);
+						await mouse.pressButton(btn)
 					} else {
-						await mouse.releaseButton(btn);
+						await mouse.releaseButton(btn)
 					}
 				}
-				break;
+				break
 			}
 
-			case 'scroll': {
-				const MAX_SCROLL = 100;
-				const promises: Promise<void>[] = [];
+			case "scroll": {
+				const MAX_SCROLL = 100
+				const promises: Promise<void>[] = []
 
 				// Vertical scroll
 				if (this.isFiniteNumber(msg.dy) && Math.round(msg.dy) !== 0) {
-					const amount = this.clamp(Math.round(msg.dy), -MAX_SCROLL, MAX_SCROLL);
+					const amount = this.clamp(Math.round(msg.dy), -MAX_SCROLL, MAX_SCROLL)
 					if (amount > 0) {
-						promises.push(mouse.scrollDown(amount).then(() => { }));
+						promises.push(mouse.scrollDown(amount).then(() => {}))
 					} else if (amount < 0) {
-						promises.push(mouse.scrollUp(-amount).then(() => { }));
+						promises.push(mouse.scrollUp(-amount).then(() => {}))
 					}
 				}
 
 				// Horizontal scroll
 				if (this.isFiniteNumber(msg.dx) && Math.round(msg.dx) !== 0) {
-					const amount = this.clamp(Math.round(msg.dx), -MAX_SCROLL, MAX_SCROLL);
+					const amount = this.clamp(Math.round(msg.dx), -MAX_SCROLL, MAX_SCROLL)
 					if (amount > 0) {
-						promises.push(mouse.scrollRight(amount).then(() => { }));
+						promises.push(mouse.scrollRight(amount).then(() => {}))
 					} else if (amount < 0) {
-						promises.push(mouse.scrollLeft(-amount).then(() => { }));
+						promises.push(mouse.scrollLeft(-amount).then(() => {}))
 					}
 				}
 
 				if (promises.length) {
-					await Promise.all(promises);
+					await Promise.all(promises)
 				}
-				break;
+				break
 			}
 
-			case 'zoom':
+			case "zoom":
 				if (this.isFiniteNumber(msg.delta) && msg.delta !== 0) {
-					const sensitivityFactor = 0.5;
-					const MAX_ZOOM_STEP = 5;
+					const sensitivityFactor = 0.5
+					const MAX_ZOOM_STEP = 5
 
 					const scaledDelta =
 						Math.sign(msg.delta) *
-						Math.min(
-							Math.abs(msg.delta) * sensitivityFactor,
-							MAX_ZOOM_STEP
-						);
+						Math.min(Math.abs(msg.delta) * sensitivityFactor, MAX_ZOOM_STEP)
 
-					const amount = Math.round(-scaledDelta);
+					const amount = Math.round(-scaledDelta)
 
 					if (amount !== 0) {
-						await keyboard.pressKey(Key.LeftControl);
+						await keyboard.pressKey(Key.LeftControl)
 						try {
 							if (amount > 0) {
-								await mouse.scrollDown(amount);
+								await mouse.scrollDown(amount)
 							} else {
-								await mouse.scrollUp(-amount);
+								await mouse.scrollUp(-amount)
 							}
 						} finally {
-							await keyboard.releaseKey(Key.LeftControl);
+							await keyboard.releaseKey(Key.LeftControl)
 						}
 					}
 				}
-				break;
+				break
 
-			case 'key':
-				if (msg.key && typeof msg.key === 'string' && msg.key.length <= 50) {
-					console.log(`Processing key: ${msg.key}`);
-					const nutKey = KEY_MAP[msg.key.toLowerCase()];
+			case "key":
+				if (msg.key && typeof msg.key === "string" && msg.key.length <= 50) {
+					console.log(`Processing key: ${msg.key}`)
+					const nutKey = KEY_MAP[msg.key.toLowerCase()]
 
 					if (nutKey !== undefined) {
-						await keyboard.pressKey(nutKey);
-						await keyboard.releaseKey(nutKey);
-					} else if (msg.key === ' ' || msg.key?.toLowerCase() === 'space') {
-						const spaceKey = KEY_MAP['space'];
-						await keyboard.pressKey(spaceKey);
-						await keyboard.releaseKey(spaceKey);
+						await keyboard.pressKey(nutKey)
+						await keyboard.releaseKey(nutKey)
+					} else if (msg.key === " " || msg.key?.toLowerCase() === "space") {
+						const spaceKey = KEY_MAP.space
+						await keyboard.pressKey(spaceKey)
+						await keyboard.releaseKey(spaceKey)
 					} else if (msg.key.length === 1) {
-						await keyboard.type(msg.key);
+						await keyboard.type(msg.key)
 					} else {
-						console.log(`Unmapped key: ${msg.key}`);
+						console.log(`Unmapped key: ${msg.key}`)
 					}
 				}
-				break;
+				break
 
-			case 'combo':
-				if (msg.keys && Array.isArray(msg.keys) && msg.keys.length > 0 && msg.keys.length <= 10) {
-					const nutKeys: (Key | string)[] = [];
+			case "combo":
+				if (
+					msg.keys &&
+					Array.isArray(msg.keys) &&
+					msg.keys.length > 0 &&
+					msg.keys.length <= 10
+				) {
+					const nutKeys: (Key | string)[] = []
 
 					for (const k of msg.keys) {
-						const lowerKey = k.toLowerCase();
-						const nutKey = KEY_MAP[lowerKey];
+						const lowerKey = k.toLowerCase()
+						const nutKey = KEY_MAP[lowerKey]
 
 						if (nutKey !== undefined) {
-							nutKeys.push(nutKey);
+							nutKeys.push(nutKey)
 						} else if (lowerKey.length === 1) {
-							nutKeys.push(lowerKey);
+							nutKeys.push(lowerKey)
 						} else {
-							console.warn(`Unknown key in combo: ${k}`);
+							console.warn(`Unknown key in combo: ${k}`)
 						}
 					}
 
 					if (nutKeys.length === 0) {
-						console.error('No valid keys in combo');
-						return;
+						console.error("No valid keys in combo")
+						return
 					}
 
-					console.log(`Pressing keys:`, nutKeys);
-					const pressedKeys: Key[] = [];
+					console.log("Pressing keys:", nutKeys)
+					const pressedKeys: Key[] = []
 
 					try {
 						for (const k of nutKeys) {
-							if (typeof k === 'string') {
-								await keyboard.type(k);
+							if (typeof k === "string") {
+								await keyboard.type(k)
 							} else {
-								await keyboard.pressKey(k);
-								pressedKeys.push(k);
+								await keyboard.pressKey(k)
+								pressedKeys.push(k)
 							}
 						}
 
-						await new Promise(resolve =>
-							setTimeout(resolve, 10)
-						);
+						await new Promise((resolve) => setTimeout(resolve, 10))
 					} finally {
 						for (const k of pressedKeys.reverse()) {
-							await keyboard.releaseKey(k);
+							await keyboard.releaseKey(k)
 						}
 					}
 
-					console.log(`Combo complete: ${msg.keys.join('+')}`);
+					console.log(`Combo complete: ${msg.keys.join("+")}`)
 				}
-				break;
+				break
 
-			case 'text':
-				if (msg.text && typeof msg.text === 'string') {
-					await keyboard.type(msg.text);
+			case "text":
+				if (msg.text && typeof msg.text === "string") {
+					await keyboard.type(msg.text)
 				}
-				break;
+				break
 		}
 	}
 }
