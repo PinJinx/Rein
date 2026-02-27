@@ -7,12 +7,21 @@ const execFileAsync = promisify(execFile)
 let isYdotoolAvailable: boolean | null = null
 let ydotoolPath: string | null = null
 
+// Cooldown state for failure retries
+let lastFailureTime = 0
+const COOLDOWN_MS = 5000 // 5 seconds before retrying
+
 /**
  * Checks if ydotool is available on the system.
  */
 export async function checkYdotool(): Promise<boolean> {
 	if (isYdotoolAvailable !== null) {
 		return isYdotoolAvailable
+	}
+
+	const now = Date.now()
+	if (now - lastFailureTime < COOLDOWN_MS) {
+		return false // Still in cooldown
 	}
 
 	try {
@@ -25,6 +34,7 @@ export async function checkYdotool(): Promise<boolean> {
 		}
 	} catch (err) {
 		isYdotoolAvailable = false
+		lastFailureTime = now
 		console.warn(
 			"[ydotool] ydotool is not available, falling back to nut.js for cursor movement.",
 		)
@@ -57,8 +67,9 @@ export async function moveRelative(dx: number, dy: number): Promise<boolean> {
 		return true
 	} catch (err) {
 		console.error("[ydotool] Error executing mousemove:", err)
-		// Consider it unavailable for future calls to avoid repeated failing attempts
-		isYdotoolAvailable = false
+		// Enter cooldown instead of permanently disabling
+		isYdotoolAvailable = null
+		lastFailureTime = Date.now()
 		return false
 	}
 }
