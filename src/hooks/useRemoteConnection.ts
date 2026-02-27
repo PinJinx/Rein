@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-
+import { writeToClipboard } from "@/utils/clipboard"
 export const useRemoteConnection = () => {
 	const wsRef = useRef<WebSocket | null>(null)
 	const [status, setStatus] = useState<
@@ -46,6 +46,21 @@ export const useRemoteConnection = () => {
 
 			socket.onopen = () => {
 				if (isMounted) setStatus("connected")
+			}
+			socket.onmessage = async (event) => {
+				const msg = JSON.parse(event.data) as {
+					type?: string
+					content?: string
+					error?: string
+				}
+				if (msg.type === "clipboard-content") {
+					if (typeof msg.content === "string") {
+						await writeToClipboard(msg.content)
+					}
+				}
+				if (msg.type === "clipboard-error") {
+					console.error(msg.error)
+				}
 			}
 			socket.onclose = () => {
 				if (isMounted) {

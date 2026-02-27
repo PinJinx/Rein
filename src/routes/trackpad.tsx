@@ -151,6 +151,25 @@ function TrackpadPage() {
 		}
 	}
 
+	const handleCopy = () => {
+		send({ type: "copy" })
+	}
+
+	const handlePaste = async () => {
+		try {
+			let text = ""
+			if (window.isSecureContext) {
+				text = await navigator.clipboard.readText()
+			}
+			send({
+				type: "paste",
+				content: text,
+			})
+		} catch {
+			console.error("Failed to read phone clipboard")
+		}
+	}
+
 	const handleModifierState = () => {
 		switch (modifier) {
 			case "Active":
@@ -199,6 +218,8 @@ function TrackpadPage() {
 			{/* CONTROL BAR */}
 			<div className="shrink-0 border-b border-base-200">
 				<ControlBar
+					onCopy={handleCopy}
+					onPaste={handlePaste}
 					scrollMode={scrollMode}
 					modifier={modifier}
 					buffer={buffer.join(" + ")}

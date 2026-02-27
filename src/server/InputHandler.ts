@@ -1,8 +1,19 @@
 import { Button, Key, Point, keyboard, mouse } from "@nut-tree-fork/nut-js"
 import { KEY_MAP } from "./KeyMap"
+import { clipboard } from "@nut-tree-fork/nut-js"
+import os from "node:os"
 
 export interface InputMessage {
-	type: "move" | "click" | "scroll" | "key" | "text" | "zoom" | "combo"
+	type:
+		| "move"
+		| "copy"
+		| "paste"
+		| "click"
+		| "scroll"
+		| "key"
+		| "text"
+		| "zoom"
+		| "combo"
 	dx?: number
 	dy?: number
 	button?: "left" | "right" | "middle"
@@ -11,6 +22,7 @@ export interface InputMessage {
 	keys?: string[]
 	text?: string
 	delta?: number
+	content?: string
 }
 
 export class InputHandler {
@@ -21,9 +33,13 @@ export class InputHandler {
 	private moveTimer: ReturnType<typeof setTimeout> | null = null
 	private scrollTimer: ReturnType<typeof setTimeout> | null = null
 	private throttleMs: number
+	private modifier: Key
+	private sendToClient: (data: unknown) => void
 
-	constructor(throttleMs = 8) {
+	constructor(sendToClient: (data: unknown) => void, throttleMs = 8) {
 		mouse.config.mouseSpeed = 1000
+		this.modifier = os.platform() === "darwin" ? Key.LeftSuper : Key.LeftControl
+		this.sendToClient = sendToClient
 		this.throttleMs = throttleMs
 	}
 
@@ -215,7 +231,37 @@ export class InputHandler {
 					}
 				}
 				break
+			case "copy": {
+				try {
+					const content = await clipboard.getContent()
+					const MAX_CLIPBOARD_SEND = 10000
+					const safeContent =
+						typeof content === "string"
+							? content.substring(0, MAX_CLIPBOARD_SEND)
+							: ""
+					this.sendToClient({
+						type: "clipboard-content",
+						content: safeContent,
+					})
+				} catch (err) {
+					this.sendToClient({
+						type: "clipboard-error",
+						error: "Clipboard read failed",
+					})
+				}
+				break
+			}
 
+			case "paste": {
+				console.log("This isnt working ")
+				if (msg.content && typeof msg.content === "string") {
+					await clipboard.setContent(msg.content)
+				}
+
+				await keyboard.pressKey(this.modifier, Key.V)
+				await keyboard.releaseKey(this.modifier, Key.V)
+				break
+			}
 			case "combo":
 				if (
 					msg.keys &&
