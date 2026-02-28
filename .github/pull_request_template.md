@@ -40,6 +40,8 @@ Fixes #(issue number)
 
 - [ ] Key combinations: Verified "hold" behavior for modifiers (e.g., Ctrl+C) and held keys are shown in buffer.
 
+- [ ] Copy and Paste: Verified Both Copy and Paste functionality works correctly.
+
 - [ ] Keyboard input: Verified Space, Backspace, and Enter keys work correctly.
 
 - [ ] Glide typing: Verified path drawing and text output.
