@@ -179,7 +179,7 @@ export class InputHandler {
 					console.warn("Error while pasting:", err)
 				} finally {
 					await Promise.allSettled([
-						keyboard.releaseKey(Key.C),
+						keyboard.releaseKey(Key.V),
 						keyboard.releaseKey(this.modifier),
 					])
 				}
