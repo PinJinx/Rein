@@ -1,3 +1,4 @@
+"use client"
 import type { ModifierState } from "@/types"
 import type React from "react"
 import {
@@ -14,6 +15,8 @@ interface ControlBarProps {
 	modifier: ModifierState
 	buffer: string
 	onToggleScroll: () => void
+	onCopy: () => void
+	onPaste: () => void
 	onLeftClick: () => void
 	onRightClick: () => void
 	onKeyboardToggle: () => void
@@ -28,6 +31,8 @@ export const ControlBar: React.FC<ControlBarProps> = ({
 	modifier,
 	onToggleScroll,
 	onLeftClick,
+	onCopy,
+	onPaste,
 	onRightClick,
 	onKeyboardToggle,
 	onModifierToggle,
@@ -101,11 +106,21 @@ export const ControlBar: React.FC<ControlBarProps> = ({
 				<Mouse size={18} className="rotate-180" />
 			</button>
 
-			<button type="button" className={baseButton}>
+			<button
+				type="button"
+				className={baseButton}
+				onPointerDown={(e) => handleInteraction(e, onCopy)}
+				aria-label="Copy"
+			>
 				<Copy size={18} />
 			</button>
 
-			<button type="button" className={baseButton}>
+			<button
+				type="button"
+				className={baseButton}
+				onPointerDown={(e) => handleInteraction(e, onPaste)}
+				aria-label="Paste"
+			>
 				<ClipboardPaste size={18} />
 			</button>
 

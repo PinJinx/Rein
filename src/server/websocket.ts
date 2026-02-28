@@ -62,7 +62,6 @@ export function createWsServer(server: CompatibleServer) {
 			: 8
 
 	const wss = new WebSocketServer({ noServer: true })
-	const inputHandler = new InputHandler(inputThrottleMs)
 	const LAN_IP = getLocalIp()
 	const MAX_PAYLOAD_SIZE = 10 * 1024 // 10KB limit
 
@@ -125,7 +124,11 @@ export function createWsServer(server: CompatibleServer) {
 			// Localhost: only store token if it's already known (trusted scan)
 			// Remote: token is already validated in the upgrade handler
 			logger.info(`Client connected from ${request.socket.remoteAddress}`)
-
+			const inputHandler = new InputHandler((data) => {
+				if (ws.readyState === ws.OPEN) {
+					ws.send(JSON.stringify(data))
+				}
+			}, inputThrottleMs)
 			if (token && (isKnownToken(token) || !isLocal)) {
 				storeToken(token)
 			}
@@ -341,6 +344,8 @@ export function createWsServer(server: CompatibleServer) {
 						"text",
 						"zoom",
 						"combo",
+						"copy",
+						"paste",
 					]
 					if (!msg.type || !VALID_INPUT_TYPES.includes(msg.type)) {
 						logger.warn(`Unknown message type: ${msg.type}`)
