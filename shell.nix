@@ -26,7 +26,7 @@ pkgs.mkShell {
     
     # Alias for starting the application
     npm i
-    npm run electron-dev"
+    npm run electron-dev
   '';
 }
 
