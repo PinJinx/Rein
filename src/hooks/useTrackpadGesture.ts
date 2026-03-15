@@ -46,9 +46,9 @@ export const useTrackpadGesture = (
 	const lastPinchDist = useRef<number | null>(null)
 	const pinching = useRef(false)
 
-	const processMovement = (sumX: number, sumY: number) => {
+	const processMovement = (sumX: number, sumY: number, e: React.TouchEvent) => {
 		const touchCount = ongoingTouches.current.size
-		if (dragging.current) {
+		/*if (dragging.current) {
 			send({
 				type: "move",
 				dx: Math.round(sumX * sensitivity * 10) / 10,
@@ -97,7 +97,14 @@ export const useTrackpadGesture = (
 				dx: Math.round(sumX * sensitivity * 10) / 10,
 				dy: Math.round(sumY * sensitivity * 10) / 10,
 			})
-		}
+		}*/
+		const { clientWidth: w, clientHeight: h } = e.currentTarget
+		const touches = Array.from(ongoingTouches.current.values()).map((t) => ({
+			id: t.identifier,
+			x: Math.round((t.pageX / w) * 1000),
+			y: Math.round((t.pageY / h) * 1000),
+		}))
+		send({ type: "touch", touches })
 	}
 
 	const handleDraggingTimeout = () => {
@@ -194,7 +201,7 @@ export const useTrackpadGesture = (
 
 		// Normalize movement by number of touches that actually moved to prevent sensitivity doubling
 		if (moved.current && movedTouchesCount > 0) {
-			processMovement(sumX / movedTouchesCount, sumY / movedTouchesCount)
+			processMovement(sumX / movedTouchesCount, sumY / movedTouchesCount, e)
 		}
 	}
 
@@ -221,7 +228,7 @@ export const useTrackpadGesture = (
 		// All fingers lifted
 		if (ongoingTouches.current.size === 0 && releasedCount.current >= 1) {
 			setIsTracking(false)
-
+			send({ type: "touch", touches: [] })
 			// Release drag if active
 			if (dragging.current) {
 				dragging.current = false

@@ -342,6 +342,7 @@ export async function createWsServer(
 						"key",
 						"text",
 						"zoom",
+						"touch",
 						"combo",
 						"copy",
 						"paste",

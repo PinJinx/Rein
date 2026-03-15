@@ -2,6 +2,7 @@ import { Button, Key, Point, keyboard, mouse } from "@nut-tree-fork/nut-js"
 import { KEY_MAP } from "./KeyMap"
 import { moveRelative } from "./ydotool"
 import os from "node:os"
+import { Trackpad } from "rein-trackpad"
 
 export interface InputMessage {
 	type:
@@ -14,10 +15,12 @@ export interface InputMessage {
 		| "text"
 		| "zoom"
 		| "combo"
+		| "touch"
 	dx?: number
 	dy?: number
 	button?: "left" | "right" | "middle"
 	press?: boolean
+	touches?: Array<{ id: number; x: number; y: number }>
 	key?: string
 	keys?: string[]
 	text?: string
@@ -32,12 +35,14 @@ export class InputHandler {
 	private moveTimer: ReturnType<typeof setTimeout> | null = null
 	private scrollTimer: ReturnType<typeof setTimeout> | null = null
 	private throttleMs: number
+	private trackpad
 	private modifier: Key
 
 	constructor(throttleMs = 8) {
 		mouse.config.mouseSpeed = 1000
 		this.modifier = os.platform() === "darwin" ? Key.LeftSuper : Key.LeftControl
 		this.throttleMs = throttleMs
+		this.trackpad = new Trackpad()
 	}
 
 	setThrottleMs(ms: number) {
@@ -116,6 +121,11 @@ export class InputHandler {
 		}
 
 		switch (msg.type) {
+			case "touch":
+				this.trackpad.inject(
+					(msg.touches ?? []).map((t) => ({ id: t.id, x: t.x, y: t.y })),
+				)
+				break
 			case "move":
 				if (
 					typeof msg.dx === "number" &&
@@ -147,23 +157,11 @@ export class InputHandler {
 			case "click": {
 				const VALID_BUTTONS = ["left", "right", "middle"]
 				if (msg.button && VALID_BUTTONS.includes(msg.button)) {
-					const btn =
-						msg.button === "left"
-							? Button.LEFT
-							: msg.button === "right"
-								? Button.RIGHT
-								: Button.MIDDLE
-
 					try {
-						if (msg.press) {
-							await mouse.pressButton(btn)
-						} else {
-							await mouse.releaseButton(btn)
-						}
+						this.trackpad.mouseClick(msg.button, msg.press ?? false)
 					} catch (err) {
 						console.error("Click event failed:", err)
-						// ensure release just in case
-						await mouse.releaseButton(btn).catch(() => {})
+						this.trackpad.mouseClick(msg.button, false)
 					}
 				}
 				break

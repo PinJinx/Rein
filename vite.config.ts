@@ -39,6 +39,12 @@ const config = defineConfig({
 		tanstackStart(),
 		viteReact(),
 	],
+	optimizeDeps: {
+		exclude: ["rein-trackpad"],
+	},
+	ssr: {
+		external: ["rein-trackpad"],
+	},
 	server: {
 		host: serverConfig.host === "0.0.0.0" ? true : serverConfig.host,
 		port: serverConfig.frontendPort,
