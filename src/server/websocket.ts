@@ -142,6 +142,8 @@ export async function createWsServer(
 
 			ws.on("message", async (data: WebSocket.RawData, isBinary: boolean) => {
 				try {
+					if (isBinary) return
+					/*
 					if (isBinary) {
 						// Relay frames from Providers to Consumers
 						if ((ws as ExtWebSocket).isProvider) {
@@ -156,7 +158,7 @@ export async function createWsServer(
 							}
 						}
 						return
-					}
+					}*/
 					const raw = data.toString()
 					const now = Date.now()
 
@@ -211,6 +213,22 @@ export async function createWsServer(
 					// Ping/Pong for latency measurement — echo timestamp back immediately
 					if (msg.type === "ping") {
 						ws.send(JSON.stringify({ type: "pong", timestamp: msg.timestamp }))
+						return
+					}
+
+					if (
+						msg.type === "rtc-offer" ||
+						msg.type === "rtc-answer" ||
+						msg.type === "rtc-ice" ||
+						msg.type === "provider-ready" ||
+						msg.type === "request-offer" ||
+						msg.type === "mirror-ready"
+					) {
+						for (const client of wss.clients) {
+							if (client !== ws && client.readyState === WebSocket.OPEN) {
+								client.send(raw)
+							}
+						}
 						return
 					}
 
