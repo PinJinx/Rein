@@ -5,7 +5,16 @@
   </span>
 </div>
 
-# GSoC Proposal — Rein: Virtual Input Device Simulation System
+# GSoC Proposal  Rein: Virtual Input Device Simulation System
+
+Demo Videos:
+a) From a my machine which is a arch + hyprland combo running on wayland 
+
+https://github.com/user-attachments/assets/06739f75-9caf-4cd0-83de-7dd82e747007
+
+b) From my friends Machine which is running ubuntu in Xorg.
+
+<---Link to be uploaded -->
 
 > **Linux only.** This branch contains a proof-of-concept implementation of virtual trackpad input via a native Rust addon. Windows and macOS are not supported at this stage — the server will crash on non-Linux systems.
 
