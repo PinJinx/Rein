@@ -37,8 +37,8 @@ cd Rein
 
 In a separate directory alongside the main project:
 ```bash
-git clone -b trackpadpoc https://github.com/PinJinx/rein-trackpad.git
-cd rein-trackpad
+git clone https://github.com/PinJinx/rein-virtual-trackpad-poc.git
+cd rein-virtual-trackpad-poc
 npm install
 npm run build
 ```
@@ -47,12 +47,12 @@ npm run build
 
 From inside the `Rein` directory:
 ```bash
-npm install /absolute/path/to/rein-trackpad --ignore-scripts
+npm install /absolute/path/to/rein-virtual-trackpad-poc --ignore-scripts
 ```
 
 Replace `/absolute/path/to/rein-trackpad` with the actual path where you cloned the addon, for example:
 ```bash
-npm install /home/youruser/rein-trackpad --ignore-scripts
+npm install /home/youruser/rein-virtual-trackpad-poc --ignore-scripts
 ```
 
 ### 4. Install main project dependencies
