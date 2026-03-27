@@ -64,6 +64,26 @@ sudo ufw allow 3000/tcp
 Visit the [Discord Channel](https://discord.com/invite/C8wHmwtczs) for interacting with the community!
 (Go to Project-> Rein)
 
+---
+
+
+## Testing Rein on Virtual Machines
+
+When testing Rein inside a Virtual Machine (VirtualBox), the VM must allow devices on the same network to access the server.
+
+### Network Configuration
+
+1. Open **VM Settings**
+2. Go to **Network**
+3. Change Adapter from **NAT → Bridged Adapter**
+4. Select your active **Wi-Fi or Ethernet interface**
+
+This allows devices on the same LAN to connect to the Rein server running inside the VM.
+
+### For MacOS
+
+Grant Accessibility permission to your terminal/IDE in System Settings → Privacy & Security → Accessibility.
+
 
 ---
 
