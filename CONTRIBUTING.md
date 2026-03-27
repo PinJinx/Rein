@@ -257,7 +257,7 @@ The project uses [Biome](https://biomejs.dev/) for formatting and linting.
 
 ## 🖥 Testing Rein on a Virtual Machine
 
-When testing Rein inside a Virtual Machine (VirtualBox or VMware), the VM must allow devices on the same network to access the server.
+When testing Rein inside a Virtual Machine (VirtualBox), the VM must allow devices on the same network to access the server.
 
 ### Network Configuration
 
@@ -267,6 +267,10 @@ When testing Rein inside a Virtual Machine (VirtualBox or VMware), the VM must a
 4. Select your active **Wi-Fi or Ethernet interface**
 
 This allows devices on the same LAN to connect to the Rein server running inside the VM.
+
+### For MacOD
+
+Grant Accessibility permission to your terminal/IDE in System Settings → Privacy & Security → Accessibility.
 
 ## 🌟 Community Guidelines
 
