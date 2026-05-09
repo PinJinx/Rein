@@ -137,6 +137,20 @@ function SettingsPage() {
 			.catch((e) => console.error("QR Error:", e))
 	}, [ip, shareUrl])
 
+	const [acceleration, setAcceleration] = useState(() => {
+		if (typeof window === "undefined") return true
+		try {
+			const saved = localStorage.getItem("rein_acceleration")
+			return saved === "true"
+		} catch {
+			return true
+		}
+	})
+
+	useEffect(() => {
+		localStorage.setItem("rein_acceleration", JSON.stringify(acceleration))
+	}, [acceleration])
+
 	// Effect: Auto-detect LAN IP from Server (only if on localhost)
 	useEffect(() => {
 		if (typeof window === "undefined") return

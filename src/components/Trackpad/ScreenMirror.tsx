@@ -9,6 +9,7 @@ interface ScreenMirrorProps {
 	scrollMode: boolean
 	isTracking: boolean
 	handlers: React.HTMLAttributes<HTMLDivElement>
+	canvasRef: React.RefObject<HTMLCanvasElement | null>
 }
 
 const TEXTS = {
@@ -20,9 +21,9 @@ export const ScreenMirror = ({
 	scrollMode,
 	isTracking,
 	handlers,
+	canvasRef,
 }: ScreenMirrorProps) => {
 	const { wsRef, status } = useConnection()
-	const canvasRef = useRef<HTMLCanvasElement>(null)
 	const { hasFrame } = useMirrorStream(wsRef, canvasRef, status)
 
 	return (
