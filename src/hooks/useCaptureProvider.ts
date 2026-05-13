@@ -27,6 +27,12 @@ export function useCaptureProvider(wsRef: React.RefObject<WebSocket | null>) {
 		}
 		setIsSharing(false)
 	}
+	const getConfig = () => ({
+		sensitivity:
+			Number.parseFloat(localStorage.getItem("rein_sensitivity") || "1.0") ||
+			1.0,
+		invertScroll: localStorage.getItem("rein_invert") === "true" || false,
+	})
 
 	const captureFrame = () => {
 		if (!videoRef.current || !canvasRef.current || !wsRef.current) return
@@ -103,7 +109,9 @@ export function useCaptureProvider(wsRef: React.RefObject<WebSocket | null>) {
 			setIsSharing(true)
 
 			if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-				wsRef.current.send(JSON.stringify({ type: "start-provider" }))
+				wsRef.current.send(
+					JSON.stringify({ type: "start-provider", config: getConfig() }),
+				)
 			}
 
 			// Start capture loop (approx 12 FPS)

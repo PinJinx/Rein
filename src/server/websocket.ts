@@ -1,5 +1,5 @@
 import fs from "node:fs"
-import type { IncomingMessage } from "node:http"
+import { get, type IncomingMessage } from "node:http"
 import type { Socket } from "node:net"
 import { WebSocket, WebSocketServer } from "ws"
 import logger from "../utils/logger"
@@ -47,7 +47,6 @@ export async function createWsServer(
 			: 8
 
 	const wss = new WebSocketServer({ noServer: true })
-	const inputHandler = new InputHandler(inputThrottleMs)
 	let LAN_IP = "127.0.0.1"
 	try {
 		LAN_IP = await getLocalIp()
@@ -121,7 +120,13 @@ export async function createWsServer(
 			// Localhost: only store token if it's already known (trusted scan)
 			// Remote: token is already validated in the upgrade handler
 			logger.info(`Client connected from ${request.socket.remoteAddress}`)
-
+			let inputHandler: InputHandler | null = null
+			if (!inputHandler) {
+				inputHandler = new InputHandler()
+				console.log(
+					`[WebSocket] InputHandler initialized with throttle ${inputHandler["throttleMs"]}ms`,
+				)
+			}
 			if (token && (isKnownToken(token) || !isLocal)) {
 				storeToken(token)
 			}
@@ -225,6 +230,7 @@ export async function createWsServer(
 					}
 
 					if (msg.type === "start-provider") {
+						inputHandler.updateConfig(msg.config ?? {})
 						;(ws as ExtWebSocket).isProvider = true
 						logger.info("Client registered as Screen Provider")
 						return
@@ -343,6 +349,7 @@ export async function createWsServer(
 						"text",
 						"zoom",
 						"combo",
+						"update-settings",
 						"copy",
 						"paste",
 					]

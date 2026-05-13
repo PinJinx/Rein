@@ -1,10 +1,14 @@
-// lib/input/InputHandler.ts
-import { Button, Key, Point, keyboard, mouse } from "@nut-tree-fork/nut-js"
-import { KEY_MAP } from "./KeyMap"
-import { moveRelative } from "./ydotool"
+/**
+ * Cross-platform input event dispatcher and coordinator.
+ *
+ * Routes validated input messages to the appropriate platform-specific
+ * injector, manages runtime configuration, applies input processing,
+ * throttles high-frequency events, and provides a unified interface for
+ * mouse, keyboard, touch, clipboard, and gesture interactions.
+ */
 import os from "node:os"
-import { WindowsInputInjector } from "./drivers/windows"
-
+import path from "node:path"
+import { applyMotion } from "./drivers/utils"
 export interface InputMessage {
 	type:
 		| "move"
@@ -17,8 +21,10 @@ export interface InputMessage {
 		| "zoom"
 		| "combo"
 		| "touch"
+		| "update-settings"
 	dx?: number
 	dy?: number
+	config?: Partial<InputConfig>
 	button?: "left" | "right" | "middle"
 	press?: boolean
 	key?: string
@@ -34,12 +40,35 @@ export interface InputMessage {
 }
 
 export interface InputConfig {
-	sensitivity: number // 0.1 to 3.0
+	sensitivity: number
 	invertScroll: boolean
 	acceleration: boolean
 }
 
+type PlatformInjector = {
+	updateConfig(config: Partial<InputConfig>): void
+	injectMouseMove(dx: number, dy: number): void
+	injectMouseButton(button: "left" | "right" | "middle", isDown: boolean): void
+	injectMouseWheel(dx: number, dy: number): void
+	injectKey(key: string): void
+	injectCombo(keys: string[]): void
+	injectText(text: string): void
+	injectTouch(contacts: NonNullable<InputMessage["contacts"]>): void
+	destroy(): void
+}
+
+const VALID_BUTTONS = ["left", "right", "middle"] as const
+type MouseButton = (typeof VALID_BUTTONS)[number]
+
+const MAX_COORD = 2000
+const MAX_TEXT_LENGTH = 500
+const MAX_COMBO_KEYS = 10
+const MAX_KEY_LENGTH = 50
+
 export class InputHandler {
+	private injector: PlatformInjector
+	private platform: "win32" | "linux" | "darwin" | "other"
+
 	private lastMoveTime = 0
 	private lastScrollTime = 0
 	private pendingMove: InputMessage | null = null
@@ -47,312 +76,277 @@ export class InputHandler {
 	private moveTimer: ReturnType<typeof setTimeout> | null = null
 	private scrollTimer: ReturnType<typeof setTimeout> | null = null
 	private throttleMs: number
-	private modifier: Key
-	private isWindows: boolean
-	private winInjector: WindowsInputInjector | null = null
+
+	private config: InputConfig = {
+		sensitivity: 1.0,
+		invertScroll: false,
+		acceleration: true,
+	}
 
 	constructor(config: Partial<InputConfig> = {}, throttleMs = 8) {
-		mouse.config.mouseSpeed = 1000
-		this.isWindows = os.platform() === "win32"
-		this.modifier = os.platform() === "darwin" ? Key.LeftSuper : Key.LeftControl
 		this.throttleMs = throttleMs
+		this.config = { ...this.config, ...config }
 
-		if (this.isWindows) {
-			this.winInjector = new WindowsInputInjector(config)
+		const plat = os.platform()
+
+		if (plat === "win32") {
+			this.platform = "win32"
+			const winPath = path.join(
+				process.cwd(),
+				"src/server/drivers/windows/index.ts",
+			)
+			const { WindowsInputInjector } = require(winPath)
+			this.injector = new WindowsInputInjector(this.config) as PlatformInjector
+		} else if (plat === "linux") {
+			this.platform = "linux"
+			const linuxPath = path.join(
+				process.cwd(),
+				"src/server/drivers/linux/index.ts",
+			)
+			const { LinuxInputInjector } = require(linuxPath)
+			this.injector = new LinuxInputInjector(this.config) as PlatformInjector
+		} else if (plat === "darwin") {
+			this.platform = "darwin"
+			const macPath = path.join(
+				process.cwd(),
+				"src/server/drivers/mac/index.ts",
+			)
+			const { MacInputInjector } = require(macPath)
+			this.injector = new MacInputInjector(this.config) as PlatformInjector
+		} else {
+			this.platform = "other"
+			console.warn(`[InputHandler] Unsupported platform: ${plat}`)
+			this.injector = createStubInjector()
 		}
 	}
 
 	updateConfig(config: Partial<InputConfig>): void {
-		if (this.isWindows && this.winInjector) {
-			this.winInjector.updateConfig(config)
-		}
+		console.log("[InputHandler] Updating config:", config)
+		this.config = { ...this.config, ...config }
+		this.injector.updateConfig(config)
 	}
 
-	setThrottleMs(ms: number) {
+	setThrottleMs(ms: number): void {
 		this.throttleMs = ms
 	}
 
-	private isFiniteNumber(value: unknown): value is number {
-		return typeof value === "number" && Number.isFinite(value)
-	}
+	async handleMessage(msg: InputMessage): Promise<void> {
+		this.sanitizeMessage(msg)
 
-	private clamp(value: number, min: number, max: number): number {
-		return Math.max(min, Math.min(max, value))
-	}
-
-	async handleMessage(msg: InputMessage) {
-		// --- Input sanitisation ---
-		if (typeof msg.text === "string" && msg.text.length > 500) {
-			msg.text = msg.text.substring(0, 500)
-		}
-		const MAX_COORD = 2000
-		msg.dx = this.isFiniteNumber(msg.dx)
-			? this.clamp(msg.dx, -MAX_COORD, MAX_COORD)
-			: 0
-		msg.dy = this.isFiniteNumber(msg.dy)
-			? this.clamp(msg.dy, -MAX_COORD, MAX_COORD)
-			: 0
-		msg.delta = this.isFiniteNumber(msg.delta)
-			? this.clamp(msg.delta, -MAX_COORD, MAX_COORD)
-			: 0
-
-		// --- Throttle high-frequency events ---
 		if (msg.type === "move" || msg.type === "scroll") {
-			const key = msg.type === "move" ? "lastMoveTime" : "lastScrollTime"
-			const pending = msg.type === "move" ? "pendingMove" : "pendingScroll"
-			const timer = msg.type === "move" ? "moveTimer" : "scrollTimer"
-			const now = Date.now()
-
-			if (now - this[key] < this.throttleMs) {
-				this[pending] = msg
-				if (!this[timer]) {
-					this[timer] = setTimeout(() => {
-						this[timer] = null
-						const p = this[pending]
-						if (p) {
-							this[pending] = null
-							this.handleMessage(p).catch(console.error)
-						}
-					}, this.throttleMs)
-				}
-				return
-			}
-			this[key] = now
+			if (this.throttle(msg)) return
 		}
 
-		switch (msg.type) {
-			// ---------------------------------------------------------------
-			case "move":
-				if (msg.dx === 0 && msg.dy === 0) break
-				if (this.isWindows && this.winInjector) {
-					// Use new Windows injector which applies sensitivity/acceleration
-					this.winInjector.injectMouseMove(msg.dx, msg.dy)
-					break
-				}
+		try {
+			this.dispatch(msg)
+		} catch (err: unknown) {
+			console.error(
+				`[InputHandler] Error handling ${msg.type} event:`,
+				err instanceof Error ? err.message : err,
+			)
+			// Safety: release mouse button if a click-down throws
+			if (msg.type === "click" && msg.press && isValidButton(msg.button)) {
 				try {
-					const success = await moveRelative(msg.dx, msg.dy)
-					if (!success) {
-						const pos = await mouse.getPosition()
-						await mouse.setPosition(
-							new Point(Math.round(pos.x + msg.dx), Math.round(pos.y + msg.dy)),
+					this.injector.injectMouseButton(msg.button, false)
+				} catch (cleanupErr) {
+					console.error(
+						"[InputHandler] Cleanup after click failure:",
+						cleanupErr,
+					)
+				}
+			}
+		}
+	}
+
+	destroy(): void {
+		this.injector.destroy()
+		clearTimeout(this.moveTimer ?? undefined)
+		clearTimeout(this.scrollTimer ?? undefined)
+		this.moveTimer = null
+		this.scrollTimer = null
+		console.log("[InputHandler] Destroyed")
+	}
+
+	private sanitizeMessage(msg: InputMessage): void {
+		if (typeof msg.text === "string" && msg.text.length > MAX_TEXT_LENGTH) {
+			msg.text = msg.text.substring(0, MAX_TEXT_LENGTH)
+		}
+		msg.dx = clampFinite(msg.dx, -MAX_COORD, MAX_COORD)
+		msg.dy = clampFinite(msg.dy, -MAX_COORD, MAX_COORD)
+		msg.delta = clampFinite(msg.delta, -MAX_COORD, MAX_COORD)
+	}
+
+	private throttle(msg: InputMessage): boolean {
+		const now = Date.now()
+		const isMove = msg.type === "move"
+		const lastKey = isMove ? "lastMoveTime" : "lastScrollTime"
+		const pendingKey = isMove ? "pendingMove" : "pendingScroll"
+		const timerKey = isMove ? "moveTimer" : "scrollTimer"
+
+		if (now - this[lastKey] < this.throttleMs) {
+			this[pendingKey] = msg
+			if (!this[timerKey]) {
+				this[timerKey] = setTimeout(() => {
+					this[timerKey] = null
+					const pending = this[pendingKey]
+					if (pending) {
+						this[pendingKey] = null
+						this.handleMessage(pending).catch((err) =>
+							console.error(
+								`[InputHandler] Error flushing pending ${msg.type}:`,
+								err,
+							),
 						)
 					}
-				} catch (err) {
-					console.error("Move event failed:", err)
+				}, this.throttleMs)
+			}
+			return true
+		}
+
+		this[lastKey] = now
+		return false
+	}
+
+	private dispatch(msg: InputMessage): void {
+		switch (msg.type) {
+			case "update-settings": {
+				console.log("[InputHandler] Updating config:", msg.config)
+				this.updateConfig(msg.config ?? {})
+				break
+			}
+			case "move": {
+				if (msg.dx === 0 && msg.dy === 0) break
+				const { ax, ay } = applyMotion(msg.dx ?? 0, msg.dy ?? 0, this.config)
+				this.injector.injectMouseMove(ax, ay)
+				break
+			}
+
+			case "click": {
+				if (!isValidButton(msg.button)) break
+				this.injector.injectMouseButton(msg.button, !!msg.press)
+				break
+			}
+
+			case "scroll": {
+				this.injector.injectMouseWheel(msg.dx ?? 0, msg.dy ?? 0)
+				break
+			}
+
+			case "zoom": {
+				if (!Number.isFinite(msg.delta) || msg.delta === 0) break
+				const MAX_ZOOM_STEP = 5
+				const delta = msg.delta ?? 0
+				const scaled =
+					Math.sign(delta) * Math.min(Math.abs(delta) * 0.5, MAX_ZOOM_STEP)
+				const amount = Math.round(-scaled)
+				if (amount !== 0) {
+					this.injector.injectKey("control")
+					this.injector.injectMouseWheel(0, amount)
+					this.injector.injectKey("control")
 				}
 				break
+			}
 
-			// ---------------------------------------------------------------
-			case "click": {
-				const VALID = ["left", "right", "middle"] as const
+			case "copy": {
+				this.injector.injectCombo(
+					this.platform === "darwin" ? ["meta", "c"] : ["control", "c"],
+				)
+				break
+			}
+
+			case "paste": {
+				this.injector.injectCombo(
+					this.platform === "darwin" ? ["meta", "v"] : ["control", "v"],
+				)
+				break
+			}
+
+			case "key": {
 				if (
-					!msg.button ||
-					!VALID.includes(msg.button as (typeof VALID)[number])
+					!msg.key ||
+					typeof msg.key !== "string" ||
+					msg.key.length > MAX_KEY_LENGTH
 				)
 					break
-				const button = msg.button as "left" | "right" | "middle"
-
-				if (this.isWindows && this.winInjector) {
-					this.winInjector.injectMouseButton(button, !!msg.press)
-					break
-				}
-
-				const btn =
-					button === "left"
-						? Button.LEFT
-						: button === "right"
-							? Button.RIGHT
-							: Button.MIDDLE
-				try {
-					if (msg.press) await mouse.pressButton(btn)
-					else await mouse.releaseButton(btn)
-				} catch (err) {
-					console.error("Click event failed:", err)
-					await mouse.releaseButton(btn).catch(() => {})
-				}
+				const key =
+					msg.key === " " || msg.key.toLowerCase() === "space"
+						? "space"
+						: msg.key
+				this.injector.injectKey(key)
 				break
 			}
 
-			// ---------------------------------------------------------------
-			case "copy":
-				if (this.isWindows && this.winInjector) {
-					this.winInjector.injectCombo(["control", "c"])
-					break
-				}
-				try {
-					await keyboard.pressKey(this.modifier, Key.C)
-				} catch (e) {
-					console.warn("Copy failed:", e)
-				} finally {
-					await Promise.allSettled([
-						keyboard.releaseKey(Key.C),
-						keyboard.releaseKey(this.modifier),
-					])
-				}
-				break
-
-			case "paste":
-				if (this.isWindows && this.winInjector) {
-					this.winInjector.injectCombo(["control", "v"])
-					break
-				}
-				try {
-					await keyboard.pressKey(this.modifier, Key.V)
-				} catch (e) {
-					console.warn("Paste failed:", e)
-				} finally {
-					await Promise.allSettled([
-						keyboard.releaseKey(Key.V),
-						keyboard.releaseKey(this.modifier),
-					])
-				}
-				break
-
-			// ---------------------------------------------------------------
-			case "scroll":
-				if (this.isWindows && this.winInjector) {
-					// Windows injector handles invertScroll setting
-					this.winInjector.injectMouseWheel(msg.dx, msg.dy)
-					break
-				}
-				{
-					const MAX_SCROLL = 100
-					const promises: Promise<unknown>[] = []
-					if (this.isFiniteNumber(msg.dy) && Math.round(msg.dy) !== 0) {
-						const amt = this.clamp(Math.round(msg.dy), -MAX_SCROLL, MAX_SCROLL)
-						promises.push(
-							amt > 0 ? mouse.scrollDown(amt) : mouse.scrollUp(-amt),
-						)
-					}
-					if (this.isFiniteNumber(msg.dx) && Math.round(msg.dx) !== 0) {
-						const amt = this.clamp(Math.round(msg.dx), -MAX_SCROLL, MAX_SCROLL)
-						promises.push(
-							amt > 0 ? mouse.scrollRight(amt) : mouse.scrollLeft(-amt),
-						)
-					}
-					if (promises.length) {
-						const results = await Promise.allSettled(promises)
-						for (const r of results)
-							if (r.status === "rejected")
-								console.error("Scroll failed:", r.reason)
-					}
-				}
-				break
-
-			// ---------------------------------------------------------------
-			case "zoom":
-				// On Windows zoom is handled by the touch layer (pinch contacts).
-				if (this.isWindows) break
-				if (!this.isFiniteNumber(msg.delta) || msg.delta === 0) break
-				{
-					const MAX_ZOOM_STEP = 5
-					const scaledDelta =
-						Math.sign(msg.delta) *
-						Math.min(Math.abs(msg.delta) * 0.5, MAX_ZOOM_STEP)
-					const amount = Math.round(-scaledDelta)
-					if (amount !== 0) {
-						await keyboard.pressKey(Key.LeftControl)
-						try {
-							amount > 0
-								? await mouse.scrollDown(amount)
-								: await mouse.scrollUp(-amount)
-						} finally {
-							await keyboard.releaseKey(Key.LeftControl)
-						}
-					}
-				}
-				break
-
-			// ---------------------------------------------------------------
-			case "key":
-				if (!msg.key || typeof msg.key !== "string" || msg.key.length > 50)
-					break
-				if (this.isWindows && this.winInjector) {
-					this.winInjector.injectKey(msg.key)
-					break
-				}
-				{
-					const nutKey = KEY_MAP[msg.key.toLowerCase()]
-					try {
-						if (nutKey !== undefined) {
-							await keyboard.pressKey(nutKey)
-							await keyboard.releaseKey(nutKey)
-						} else if (msg.key === " " || msg.key.toLowerCase() === "space") {
-							await keyboard.pressKey(KEY_MAP.space)
-							await keyboard.releaseKey(KEY_MAP.space)
-						} else if (msg.key.length === 1) {
-							await keyboard.type(msg.key)
-						} else {
-							console.log("Unmapped key:", msg.key)
-						}
-					} catch (err) {
-						console.warn("Key press failed:", err)
-						if (nutKey !== undefined)
-							await keyboard.releaseKey(nutKey).catch(() => {})
-					}
-				}
-				break
-
-			// ---------------------------------------------------------------
-			case "combo":
+			case "combo": {
 				if (
 					!Array.isArray(msg.keys) ||
 					msg.keys.length === 0 ||
-					msg.keys.length > 10
+					msg.keys.length > MAX_COMBO_KEYS
 				)
 					break
-				if (this.isWindows && this.winInjector) {
-					this.winInjector.injectCombo(msg.keys)
+				const validKeys = msg.keys.filter(
+					(k): k is string =>
+						typeof k === "string" && k.length > 0 && k.length <= MAX_KEY_LENGTH,
+				)
+				if (validKeys.length === 0) {
+					console.error("[InputHandler] No valid keys in combo")
 					break
 				}
-				{
-					const nutKeys: Key[] = []
-					const charKeys: string[] = []
-					for (const k of msg.keys) {
-						const nutKey = KEY_MAP[k.toLowerCase()]
-						if (nutKey !== undefined) nutKeys.push(nutKey)
-						else if (k.length === 1) charKeys.push(k)
-						else console.warn("Unknown combo key:", k)
-					}
-					const pressed: Key[] = []
-					try {
-						for (const k of nutKeys) {
-							await keyboard.pressKey(k)
-							pressed.push(k)
-						}
-						for (const c of charKeys) await keyboard.type(c)
-						await new Promise((r) => setTimeout(r, 10))
-					} catch (err) {
-						console.error("Combo failed:", err)
-					} finally {
-						await Promise.allSettled(
-							pressed.reverse().map((k) => keyboard.releaseKey(k)),
-						)
-					}
-				}
+				this.injector.injectCombo(validKeys)
+				console.log(`[InputHandler] Combo executed: ${validKeys.join("+")}`)
 				break
+			}
 
-			// ---------------------------------------------------------------
-			case "text":
+			case "text": {
 				if (!msg.text || typeof msg.text !== "string") break
-				if (this.isWindows && this.winInjector) {
-					console.log("Injecting text via Windows injector:", msg.text)
-					this.winInjector.injectText(msg.text)
-					break
-				}
-				try {
-					await keyboard.type(msg.text)
-				} catch (e) {
-					console.error("Type failed:", e)
-				}
+				this.injector.injectText(msg.text)
 				break
+			}
 
-			// ---------------------------------------------------------------
-			case "touch":
-				if (this.isWindows && this.winInjector && msg.contacts) {
-					this.winInjector.injectTouch(msg.contacts)
-				}
+			case "touch": {
+				if (!msg.contacts?.length) break
+				const valid = msg.contacts.filter(
+					(c) =>
+						typeof c.id === "number" &&
+						typeof c.x === "number" &&
+						typeof c.y === "number" &&
+						["down", "move", "up"].includes(c.state),
+				)
+				if (valid.length > 0) this.injector.injectTouch(valid)
 				break
+			}
+
+			default:
+				console.warn(
+					`[InputHandler] Unknown message type: ${(msg as { type?: unknown }).type}`,
+				)
 		}
+	}
+}
+
+function clampFinite(value: unknown, min: number, max: number): number {
+	if (typeof value !== "number" || !Number.isFinite(value)) return 0
+	return Math.max(min, Math.min(max, value))
+}
+
+function isValidButton(button: unknown): button is MouseButton {
+	return (
+		typeof button === "string" &&
+		(VALID_BUTTONS as readonly string[]).includes(button)
+	)
+}
+
+function createStubInjector(): PlatformInjector {
+	const warn = (method: string) =>
+		console.warn(`[InputHandler] ${method} called on unsupported platform`)
+	return {
+		updateConfig: () => {},
+		injectMouseMove: () => warn("injectMouseMove"),
+		injectMouseButton: () => warn("injectMouseButton"),
+		injectMouseWheel: () => warn("injectMouseWheel"),
+		injectKey: () => warn("injectKey"),
+		injectCombo: () => warn("injectCombo"),
+		injectText: () => warn("injectText"),
+		injectTouch: () => warn("injectTouch"),
+		destroy: () => {},
 	}
 }

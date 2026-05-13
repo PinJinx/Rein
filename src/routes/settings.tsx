@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router"
 import QRCode from "qrcode"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef, useMemo } from "react"
 import { APP_CONFIG, THEMES } from "../config"
 import serverConfig from "../server-config.json"
-
+import { useRemoteConnection } from "../hooks/useRemoteConnection"
 export const Route = createFileRoute("/settings")({
 	component: SettingsPage,
 })
@@ -14,26 +14,26 @@ function SettingsPage() {
 		String(serverConfig.frontendPort),
 	)
 	const [originalPort] = useState(String(serverConfig.frontendPort))
-
 	const serverConfigChanged = frontendPort !== originalPort
-
+	const sendConfigUpdate = useRemoteConnection().sendConfigUpdate
 	// Client Side Settings (LocalStorage)
-	const [invertScroll, setInvertScroll] = useState(() => {
-		if (typeof window === "undefined") return false
+	const [initialSensitivity, initialInvert] = (() => {
 		try {
-			const saved = localStorage.getItem("rein_invert")
-			return saved === "true"
+			const savedSensitivity = localStorage.getItem("rein_sensitivity")
+			const parsed = savedSensitivity
+				? Number.parseFloat(savedSensitivity)
+				: Number.NaN
+			return [
+				Number.isFinite(parsed) ? parsed : 1.0,
+				localStorage.getItem("rein_invert") === "true",
+			] as const
 		} catch {
-			return false
+			return [1.0, false] as const
 		}
-	})
+	})()
 
-	const [sensitivity, setSensitivity] = useState(() => {
-		if (typeof window === "undefined") return 1.0
-		const saved = localStorage.getItem("rein_sensitivity")
-		const parsed = saved ? Number.parseFloat(saved) : Number.NaN
-		return Number.isFinite(parsed) ? parsed : 1.0
-	})
+	const sensitivity = useRef(initialSensitivity)
+	const invertScroll = useRef(initialInvert)
 
 	const [theme, setTheme] = useState(() => {
 		if (typeof window === "undefined") return THEMES.DEFAULT
@@ -48,6 +48,16 @@ function SettingsPage() {
 	})
 
 	const [qrData, setQrData] = useState("")
+	const setConfig = (sensitivity_val: number, invertedScroll_val: boolean) => {
+		sensitivity.current = sensitivity_val
+		invertScroll.current = invertedScroll_val
+		localStorage.setItem("rein_sensitivity", String(sensitivity_val))
+		localStorage.setItem("rein_invert", JSON.stringify(invertedScroll_val))
+		const timer = setTimeout(() => {
+			sendConfigUpdate(sensitivity.current, invertScroll.current)
+		}, 300)
+		return () => clearTimeout(timer)
+	}
 
 	// Load initial state (IP is not stored in localStorage; only sensitivity, invert, theme are client settings)
 	const [authToken, setAuthToken] = useState(() => {
@@ -112,15 +122,6 @@ function SettingsPage() {
 		}
 	}, [])
 
-	// Effect: Update LocalStorage when settings change
-	useEffect(() => {
-		localStorage.setItem("rein_sensitivity", String(sensitivity))
-	}, [sensitivity])
-
-	useEffect(() => {
-		localStorage.setItem("rein_invert", JSON.stringify(invertScroll))
-	}, [invertScroll])
-
 	// Effect: Theme
 	useEffect(() => {
 		if (typeof window === "undefined") return
@@ -136,20 +137,6 @@ function SettingsPage() {
 			.then(setQrData)
 			.catch((e) => console.error("QR Error:", e))
 	}, [ip, shareUrl])
-
-	const [acceleration, setAcceleration] = useState(() => {
-		if (typeof window === "undefined") return true
-		try {
-			const saved = localStorage.getItem("rein_acceleration")
-			return saved === "true"
-		} catch {
-			return true
-		}
-	})
-
-	useEffect(() => {
-		localStorage.setItem("rein_acceleration", JSON.stringify(acceleration))
-	}, [acceleration])
 
 	// Effect: Auto-detect LAN IP from Server (only if on localhost)
 	useEffect(() => {
@@ -195,7 +182,7 @@ function SettingsPage() {
 							<label className="label mb-3" htmlFor="sensitivity-slider">
 								<span className="label-text">Mouse Sensitivity</span>
 								<span className="label-text-alt font-mono">
-									{sensitivity.toFixed(1)}x
+									{sensitivity.current.toFixed(1)}x
 								</span>
 							</label>
 
@@ -203,11 +190,14 @@ function SettingsPage() {
 								type="range"
 								id="sensitivity-slider"
 								min="0.1"
-								max="3.0"
+								max="6.0"
 								step="0.1"
-								value={sensitivity}
+								defaultValue={sensitivity.current}
 								onChange={(e) =>
-									setSensitivity(Number.parseFloat(e.target.value))
+									setConfig(
+										parseFloat(e.target.value) || 1.0,
+										invertScroll.current,
+									)
 								}
 								className="range range-primary range-sm w-full"
 							/>
@@ -229,8 +219,10 @@ function SettingsPage() {
 									id="invert-scroll-toggle"
 									type="checkbox"
 									className="toggle toggle-primary"
-									checked={invertScroll}
-									onChange={(e) => setInvertScroll(e.target.checked)}
+									defaultChecked={invertScroll.current}
+									onChange={(e) =>
+										setConfig(sensitivity.current, e.target.checked)
+									}
 								/>
 							</label>
 

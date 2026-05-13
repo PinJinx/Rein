@@ -2,5 +2,7 @@
 	"host": "0.0.0.0",
 	"frontendPort": 3000,
 	"address": "rein.local",
-	"inputThrottleMs": 8
+	"inputThrottleMs": 8,
+	"sensitivity": 4.8,
+	"invertScroll": false
 }

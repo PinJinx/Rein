@@ -7,9 +7,7 @@ import { ExtraKeys } from "../components/Trackpad/ExtraKeys"
 import { TouchArea } from "../components/Trackpad/TouchArea"
 import { useRemoteConnection } from "../hooks/useRemoteConnection"
 import { useTrackpadGesture } from "../hooks/useTrackpadGesture"
-import { useWindowsTouch } from "../hooks/useWindowsTouch"
 import { ScreenMirror } from "../components/Trackpad/ScreenMirror"
-
 export const Route = createFileRoute("/trackpad")({
 	component: TrackpadPage,
 })
@@ -24,36 +22,10 @@ function TrackpadPage() {
 	const isComposingRef = useRef(false)
 	const [keyboardOpen, setKeyboardOpen] = useState(false)
 	const [extraKeysVisible, setExtraKeysVisible] = useState(true)
+	const { send, sendCombo } = useRemoteConnection()
+	const gesture = useTrackpadGesture(send, scrollMode)
 
-	// Load Client Settings
-	const [sensitivity] = useState(() => {
-		if (typeof window === "undefined") return 1.0
-		const s = localStorage.getItem("rein_sensitivity")
-		return s ? Number.parseFloat(s) : 1.0
-	})
-
-	const [invertScroll] = useState(() => {
-		if (typeof window === "undefined") return false
-		const s = localStorage.getItem("rein_invert")
-		return s ? JSON.parse(s) : false
-	})
-
-	const { send, sendCombo, platform } = useRemoteConnection()
-
-	const isWindows = platform === "win32"
-
-	// Gesture hook for non-windows
-	const gesture = useTrackpadGesture(
-		send,
-		scrollMode,
-		sensitivity,
-		invertScroll,
-	)
-
-	// Native touch hook for windows
-	const winTouch = useWindowsTouch(send, canvasRef)
-
-	const { isTracking, handlers } = isWindows ? winTouch : gesture
+	const { isTracking, handlers } = gesture
 
 	// When keyboardOpen changes, focus or blur the hidden input
 	useEffect(() => {

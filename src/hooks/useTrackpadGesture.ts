@@ -1,10 +1,4 @@
 import { useEffect, useRef, useState } from "react"
-import {
-	PINCH_THRESHOLD,
-	TOUCH_MOVE_THRESHOLD,
-	TOUCH_TIMEOUT,
-	calculateAccelerationMult,
-} from "../utils/math"
 
 interface TrackedTouch {
 	identifier: number
@@ -30,8 +24,6 @@ const BUTTON_MAP: Record<number, "left" | "right" | "middle"> = {
 export const useTrackpadGesture = (
 	send: (msg: unknown) => void,
 	scrollMode: boolean,
-	sensitivity = 1.5,
-	invertScroll = false,
 	axisThreshold = 2.5,
 ) => {
 	const [isTracking, setIsTracking] = useState(false)
@@ -43,20 +35,20 @@ export const useTrackpadGesture = (
 	const releasedCount = useRef(0)
 	const dragging = useRef(false)
 	const draggingTimeout = useRef<NodeJS.Timeout | null>(null)
+	const TOUCH_MOVE_THRESHOLD = [10, 15, 15]
+	const TOUCH_TIMEOUT = 250
+	const PINCH_THRESHOLD = 10
 	const lastPinchDist = useRef<number | null>(null)
 	const pinching = useRef(false)
 
 	const processMovement = (sumX: number, sumY: number) => {
 		const touchCount = ongoingTouches.current.size
+
 		if (dragging.current) {
-			send({
-				type: "move",
-				dx: Math.round(sumX * sensitivity * 10) / 10,
-				dy: Math.round(sumY * sensitivity * 10) / 10,
-			})
+			send({ type: "move", dx: sumX, dy: sumY })
 			return
 		}
-		const invertMult = invertScroll ? -1 : 1
+
 		if (!scrollMode && touchCount === 2) {
 			const touches = Array.from(ongoingTouches.current.values())
 			const dist = getTouchDistance(touches[0], touches[1])
@@ -65,38 +57,23 @@ export const useTrackpadGesture = (
 			if (pinching.current || Math.abs(delta) > PINCH_THRESHOLD) {
 				pinching.current = true
 				lastPinchDist.current = dist
-				send({ type: "zoom", delta: delta * sensitivity * invertMult })
+				send({ type: "zoom", delta })
 			} else {
 				lastPinchDist.current = dist
-				send({
-					type: "scroll",
-					dx: -sumX * sensitivity * invertMult,
-					dy: -sumY * sensitivity * invertMult,
-				})
+				send({ type: "scroll", dx: -sumX, dy: -sumY })
 			}
 		} else if (scrollMode || touchCount === 2) {
-			let scrollDx = sumX
-			let scrollDy = sumY
+			let dx = sumX,
+				dy = sumY
 			if (scrollMode) {
-				const absDx = Math.abs(scrollDx)
-				const absDy = Math.abs(scrollDy)
-				if (absDx > absDy * axisThreshold) {
-					scrollDy = 0
-				} else if (absDy > absDx * axisThreshold) {
-					scrollDx = 0
-				}
+				const absDx = Math.abs(dx),
+					absDy = Math.abs(dy)
+				if (absDx > absDy * axisThreshold) dy = 0
+				else if (absDy > absDx * axisThreshold) dx = 0
 			}
-			send({
-				type: "scroll",
-				dx: Math.round(-scrollDx * sensitivity * 10 * invertMult) / 10,
-				dy: Math.round(-scrollDy * sensitivity * 10 * invertMult) / 10,
-			})
+			send({ type: "scroll", dx: -dx, dy: -dy })
 		} else if (touchCount === 1) {
-			send({
-				type: "move",
-				dx: Math.round(sumX * sensitivity * 10) / 10,
-				dy: Math.round(sumY * sensitivity * 10) / 10,
-			})
+			send({ type: "move", dx: sumX, dy: sumY })
 		}
 	}
 
@@ -173,18 +150,10 @@ export const useTrackpadGesture = (
 					moved.current = true
 				}
 			}
-
-			// Calculate delta with acceleration
 			const dx = touch.pageX - tracked.pageX
 			const dy = touch.pageY - tracked.pageY
-			const timeDelta = e.timeStamp - tracked.timeStamp
-
-			if (timeDelta > 0) {
-				const speedX = (Math.abs(dx) / timeDelta) * 1000
-				const speedY = (Math.abs(dy) / timeDelta) * 1000
-				sumX += dx * calculateAccelerationMult(speedX)
-				sumY += dy * calculateAccelerationMult(speedY)
-			}
+			sumX += dx
+			sumY += dy
 
 			// Update tracked position
 			tracked.pageX = touch.pageX

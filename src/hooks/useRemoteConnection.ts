@@ -11,6 +11,20 @@ export const useRemoteConnection = () => {
 			keys: msg,
 		})
 	}
+	const sendConfigUpdate = (sensitivity: number, invertScroll: boolean) => {
+		send({
+			type: "update-settings",
+			config: { sensitivity, invertScroll },
+		})
+	}
 
-	return { status, platform, send, sendCombo, wsRef, subscribe }
+	return {
+		status,
+		platform,
+		send,
+		sendCombo,
+		sendConfigUpdate,
+		wsRef,
+		subscribe,
+	}
 }

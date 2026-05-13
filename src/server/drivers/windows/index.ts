@@ -1,3 +1,10 @@
+/**
+ * Windows input injection backend using the Win32 SendInput API.
+ *
+ * Provides mouse, keyboard, and touch input injection on Windows,
+ * handling native mouse events directly while delegating keyboard
+ * and touch functionality to platform-specific modules.
+ */
 import { SendInput, INPUT_STRUCT_SIZE } from "./structs"
 import {
 	MOUSEEVENTF_MOVE,
@@ -15,6 +22,11 @@ import { INPUT_MOUSE, DEFAULT_CONFIG } from "../constants"
 import type { InputConfig, TouchContact } from "../types"
 import { WindowsKeyboard } from "./keyboard"
 import { WindowsTouch } from "./touch"
+
+
+if (process.platform !== "win32") {
+	throw new Error("WindowsInputInjector can only be used on Windows")
+}
 
 export class WindowsInputInjector {
 	private keyboard: WindowsKeyboard
@@ -34,15 +46,6 @@ export class WindowsInputInjector {
 	// ---- Mouse ----
 	injectMouseMove(dx: number, dy: number): void {
 		if (dx === 0 && dy === 0) return
-
-		const scaledDx = dx * this.config.sensitivity
-		const scaledDy =
-			dy * this.config.sensitivity * (this.config.invertScroll ? -1 : 1)
-
-		const { ax: finalDx, ay: finalDy } = this.config.acceleration
-			? this.applyAcceleration(scaledDx, scaledDy)
-			: { ax: scaledDx, ay: scaledDy }
-
 		SendInput(
 			1,
 			[
@@ -51,8 +54,8 @@ export class WindowsInputInjector {
 					__pad: 0,
 					u: {
 						mi: {
-							dx: Math.round(finalDx),
-							dy: Math.round(finalDy),
+							dx: Math.round(dx),
+							dy: Math.round(dy),
 							mouseData: 0,
 							dwFlags: MOUSEEVENTF_MOVE,
 							time: 0,
@@ -140,18 +143,7 @@ export class WindowsInputInjector {
 		}
 	}
 
-	private applyAcceleration(
-		dx: number,
-		dy: number,
-	): { ax: number; ay: number } {
-		const magnitude = Math.sqrt(dx * dx + dy * dy)
-		if (magnitude < 1) return { ax: dx, ay: dy }
-		const accelerated = magnitude ** 1.2 * 0.8
-		const ratio = accelerated / magnitude
-		return { ax: dx * ratio, ay: dy * ratio }
-	}
-
-	// ---- Keyboard (delegated) ----
+	// Keyboard
 	injectKey(key: string): void {
 		this.keyboard.injectKey(key)
 	}
@@ -164,12 +156,12 @@ export class WindowsInputInjector {
 		this.keyboard.injectText(text)
 	}
 
-	// ---- Touch (delegated) ----
+	// Touch
 	injectTouch(contacts: TouchContact[]): void {
 		this.touch.injectTouch(contacts)
 	}
 
-	// ---- Cleanup ----
+	//Cleanup 
 	destroy(): void {
 		this.touch.destroy()
 	}

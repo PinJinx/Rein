@@ -1,9 +1,16 @@
+/**
+ * Windows synthetic touch implementation.
+ *
+ * Manages multi-touch contact tracking and injects touchpad events
+ * through the Windows Synthetic Pointer API. Handles pointer allocation,
+ * contact lifecycle management, primary contact tracking, and touch
+ * frame generation for native touch input emulation.
+ */
 import koffi from "koffi"
 import { CreateSyntheticPointerDevice, InjectPointerInput } from "./structs"
 import {
 	PT_TOUCHPAD,
 	POINTER_FEEDBACK_DEFAULT,
-	POINTER_FLAG_NONE,
 	POINTER_FLAG_NEW,
 	POINTER_FLAG_INRANGE,
 	POINTER_FLAG_INCONTACT,

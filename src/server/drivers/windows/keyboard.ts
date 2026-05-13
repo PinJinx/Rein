@@ -1,5 +1,10 @@
-// src/server/drivers/windows/keyboard.ts
-
+/**
+ * Windows virtual keyboard implementation.
+ *
+ * Handles key, key-combination, and text injection using the Win32
+ * SendInput API. Supports both virtual-key based input and Unicode
+ * character injection for reliable text entry across applications.
+ */
 import { SendInput, INPUT_STRUCT_SIZE } from "./structs"
 import { KEYEVENTF_KEYUP, KEYEVENTF_UNICODE } from "./constants"
 import { INPUT_KEYBOARD } from "../constants"
@@ -88,8 +93,6 @@ export class WindowsKeyboard {
 			console.warn("[Text] Empty text, returning")
 			return
 		}
-
-		let charIndex = 0
 		for (const ch of text) {
 			const c = ch.charCodeAt(0)
 
@@ -121,7 +124,6 @@ export class WindowsKeyboard {
 					},
 				},
 			])
-			charIndex++
 		}
 	}
 
