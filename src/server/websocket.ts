@@ -143,18 +143,6 @@ export async function createWsServer(
 			ws.on("message", async (data: WebSocket.RawData, isBinary: boolean) => {
 				try {
 					if (isBinary) {
-						// Relay frames from Providers to Consumers
-						if ((ws as ExtWebSocket).isProvider) {
-							for (const client of wss.clients) {
-								if (
-									client !== ws &&
-									(client as ExtWebSocket).isConsumer &&
-									client.readyState === WebSocket.OPEN
-								) {
-									client.send(data, { binary: true })
-								}
-							}
-						}
 						return
 					}
 					const raw = data.toString()
@@ -173,6 +161,20 @@ export async function createWsServer(
 							lastTokenTouch = now
 							touchToken(token)
 						}
+					}
+
+					if (
+						msg.type === "offer" ||
+						msg.type === "answer" ||
+						msg.type === "ice-candidate" ||
+						msg.type === "lan-info"
+					) {
+						for (const client of wss.clients) {
+							if (client !== ws && client.readyState === WebSocket.OPEN) {
+								client.send(JSON.stringify(msg))
+							}
+						}
+						return
 					}
 
 					if (msg.type === "get-ip") {
@@ -208,7 +210,6 @@ export async function createWsServer(
 						return
 					}
 
-					// Ping/Pong for latency measurement — echo timestamp back immediately
 					if (msg.type === "ping") {
 						ws.send(JSON.stringify({ type: "pong", timestamp: msg.timestamp }))
 						return
@@ -216,17 +217,39 @@ export async function createWsServer(
 
 					if (msg.type === "start-mirror") {
 						startMirror()
+						for (const client of wss.clients) {
+							if (
+								(client as ExtWebSocket).isProvider &&
+								client.readyState === WebSocket.OPEN
+							) {
+								client.send(JSON.stringify({ type: "consumer_joined" }))
+							}
+						}
 						return
 					}
 
 					if (msg.type === "stop-mirror") {
 						stopMirror()
+						for (const client of wss.clients) {
+							if (
+								(client as ExtWebSocket).isProvider &&
+								client.readyState === WebSocket.OPEN
+							) {
+								client.send(JSON.stringify({ type: "consumer_left" }))
+							}
+						}
 						return
 					}
 
 					if (msg.type === "start-provider") {
 						;(ws as ExtWebSocket).isProvider = true
 						logger.info("Client registered as Screen Provider")
+						const hasConsumer = Array.from(wss.clients).some(
+							(c) => (c as ExtWebSocket).isConsumer,
+						)
+						if (hasConsumer) {
+							ws.send(JSON.stringify({ type: "consumer_joined" }))
+						}
 						return
 					}
 
@@ -362,6 +385,16 @@ export async function createWsServer(
 			})
 
 			ws.on("close", () => {
+				if ((ws as ExtWebSocket).isConsumer) {
+					for (const client of wss.clients) {
+						if (
+							(client as ExtWebSocket).isProvider &&
+							client.readyState === WebSocket.OPEN
+						) {
+							client.send(JSON.stringify({ type: "consumer_left" }))
+						}
+					}
+				}
 				stopMirror()
 				logger.info("Client disconnected")
 			})
