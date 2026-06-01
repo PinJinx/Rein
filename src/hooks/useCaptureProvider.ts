@@ -14,6 +14,20 @@ interface ElectronWindow extends Window {
 	}
 }
 
+interface ElectronDesktopConstraints {
+	audio?: {
+		mandatory: {
+			chromeMediaSource: "desktop"
+		}
+	}
+	video: {
+		mandatory: {
+			chromeMediaSource: "desktop"
+			chromeMediaSourceId: string
+		}
+	}
+}
+
 export function useCaptureProvider() {
 	const {
 		pcRef,
@@ -22,6 +36,7 @@ export function useCaptureProvider() {
 		createPeerConnection,
 		status,
 		configureMediaSender,
+		closePeerConnection,
 	} = useConnection()
 	const [isSharing, setIsSharing] = useState(false)
 	const senderRef = useRef<RTCRtpSender | null>(null)
@@ -36,15 +51,14 @@ export function useCaptureProvider() {
 			senderRef.current = null
 		}
 		if (pcRef.current) {
-			pcRef.current.close()
-			pcRef.current = null
+			closePeerConnection()
 		}
 		if (streamRef.current) {
 			for (const track of streamRef.current.getTracks()) track.stop()
 			streamRef.current = null
 		}
 		setIsSharing(false)
-	}, [pcRef])
+	}, [pcRef, closePeerConnection])
 
 	const handleConsumerJoined = useCallback(async () => {
 		if (isRequestingRef.current) return
@@ -55,13 +69,15 @@ export function useCaptureProvider() {
 				isRequestingRef.current = true // Set lock
 
 				// ── Electron Native Sniffing Flow ──
-				const electron = (window as unknown as ElectronWindow).electron
+				const electron = (window as ElectronWindow).electron
 				if (electron?.showSourcePicker) {
 					const sourceId = await electron.showSourcePicker()
 					if (sourceId) {
-						stream = await navigator.mediaDevices.getUserMedia({
+						const constraints: ElectronDesktopConstraints = {
 							audio: {
-								mandatory: { chromeMediaSource: "desktop" },
+								mandatory: {
+									chromeMediaSource: "desktop",
+								},
 							},
 							video: {
 								mandatory: {
@@ -69,7 +85,10 @@ export function useCaptureProvider() {
 									chromeMediaSourceId: sourceId,
 								},
 							},
-						} as unknown as MediaStreamConstraints)
+						}
+						stream = await navigator.mediaDevices.getUserMedia(
+							constraints as MediaStreamConstraints,
+						)
 					} else {
 						// Fallback if dialog dismissed with no ID
 						stream = await navigator.mediaDevices.getDisplayMedia({
@@ -86,10 +105,12 @@ export function useCaptureProvider() {
 				}
 
 				streamRef.current = stream
-				stream.getVideoTracks()[0].onended = () => stopSharing()
+				stream
+					.getVideoTracks()[0]
+					?.addEventListener("ended", stopSharing, { once: true })
 			}
 
-			if (pcRef.current) pcRef.current.close()
+			if (pcRef.current) closePeerConnection()
 			pcRef.current = createPeerConnection()
 
 			const dcUnordered = pcRef.current.createDataChannel("dc-unordered", {
@@ -103,6 +124,10 @@ export function useCaptureProvider() {
 			const handleIncomingInput = (event: MessageEvent) => {
 				try {
 					const msg = JSON.parse(event.data)
+					if (!msg || typeof msg !== "object" || !msg.type) {
+						console.warn("[RTC] Invalid message format:", msg)
+						return
+					}
 					send(msg)
 				} catch (err) {
 					console.error("[RTC] Failed to relay input", err)
@@ -127,7 +152,14 @@ export function useCaptureProvider() {
 		} finally {
 			isRequestingRef.current = false // Release lock
 		}
-	}, [createPeerConnection, pcRef, stopSharing, send, configureMediaSender])
+	}, [
+		createPeerConnection,
+		closePeerConnection,
+		pcRef,
+		stopSharing,
+		send,
+		configureMediaSender,
+	])
 
 	// Register as provider when WebSocket connects
 	useEffect(() => {

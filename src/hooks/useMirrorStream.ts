@@ -4,12 +4,12 @@
  * This hook handles subscribing to the incoming WebRTC media stream and binding
  * it directly to a video element for display.
  */
-
+import type { RefObject } from "react"
 import { useConnection } from "@/contexts/ConnectionProvider"
 import { useEffect, useRef, useState } from "react"
 
 export function useMirrorStream(
-	videoRef: React.RefObject<HTMLVideoElement | null>, // switch from canvas to video
+	videoRef: RefObject<HTMLVideoElement | null>,
 	status: "connecting" | "connected" | "disconnected",
 ) {
 	const { subscribeMirrorStream, send } = useConnection()
@@ -27,7 +27,6 @@ export function useMirrorStream(
 		sendRef.current({ type: "start-mirror" })
 
 		const unsub = subRef.current((stream) => {
-			console.log("[RTC] mirror-stream received")
 			if (videoRef.current) {
 				videoRef.current.srcObject = stream
 				if (stream) {
@@ -41,6 +40,10 @@ export function useMirrorStream(
 
 		return () => {
 			unsub()
+			if (videoRef.current) {
+				videoRef.current.srcObject = null
+			}
+			setHasStream(false)
 			sendRef.current({ type: "stop-mirror" })
 		}
 	}, [status, videoRef])

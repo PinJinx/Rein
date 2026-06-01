@@ -30,9 +30,11 @@ export const ScreenMirror = ({
 			{/* Mirror Canvas */}
 			<video
 				ref={videoRef}
+				aria-label="Screen Share Video"
 				autoPlay
 				playsInline
 				muted
+				onError={handleVideoError}
 				className={`w-full h-full object-contain transition-opacity duration-500 ${
 					hasStream ? "opacity-100" : "opacity-0"
 				}`}
@@ -59,4 +61,8 @@ export const ScreenMirror = ({
 			/>
 		</div>
 	)
+}
+
+const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
+	console.error("[RTC] Video playback error", e.currentTarget.error)
 }

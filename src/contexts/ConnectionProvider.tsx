@@ -21,6 +21,7 @@ interface ConnectionContextType {
 		cb: (stream: MediaStream | null) => void,
 	) => () => void
 	createPeerConnection: () => RTCPeerConnection
+	closePeerConnection: () => void
 	send: (msg: unknown) => void
 	sendInput: (msg: unknown) => void
 	configureMediaSender: (pc: RTCPeerConnection, sender: RTCRtpSender) => void
@@ -75,7 +76,7 @@ export function ConnectionProvider({
 		}
 	}, [])
 
-	const handleTrackReceived = useCallback((stream: MediaStream) => {
+	const handleTrackReceived = useCallback((stream: MediaStream | null) => {
 		for (const cb of mirrorStreamSubscribersRef.current) {
 			cb(stream)
 		}
@@ -87,6 +88,7 @@ export function ConnectionProvider({
 		handleSignalingMessage,
 		sendInput,
 		configureMediaSender,
+		closePeerConnection,
 	} = useWebRTC(send, handleTrackReceived)
 
 	useEffect(() => {
@@ -266,6 +268,7 @@ export function ConnectionProvider({
 					return () => mirrorStreamSubscribersRef.current.delete(cb)
 				},
 				createPeerConnection,
+				closePeerConnection,
 				send,
 				sendInput,
 				configureMediaSender,

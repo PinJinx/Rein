@@ -60,7 +60,7 @@ export async function createWsServer(
 	} else {
 		logger.info(`Resolved LAN IP: ${LAN_IP}`)
 	}
-	const MAX_PAYLOAD_SIZE = 10 * 1024 // 10KB limit
+	const MAX_PAYLOAD_SIZE = 64 * 1024 // 64KB limit
 
 	logger.info("WebSocket server initialized")
 
@@ -133,6 +133,25 @@ export async function createWsServer(
 			const startMirror = () => {
 				;(ws as ExtWebSocket).isConsumer = true
 				logger.info("Client registered as Screen Consumer")
+			}
+
+			const getConsumerCount = (exclude?: WebSocket) =>
+				Array.from(wss.clients).filter(
+					(client) =>
+						client !== exclude &&
+						(client as ExtWebSocket).isConsumer &&
+						client.readyState === WebSocket.OPEN,
+				).length
+
+			const notifyProviders = (type: "consumer_joined" | "consumer_left") => {
+				for (const client of wss.clients) {
+					if (
+						(client as ExtWebSocket).isProvider &&
+						client.readyState === WebSocket.OPEN
+					) {
+						client.send(JSON.stringify({ type }))
+					}
+				}
 			}
 
 			const stopMirror = () => {
@@ -216,27 +235,18 @@ export async function createWsServer(
 					}
 
 					if (msg.type === "start-mirror") {
+						const hadConsumers = getConsumerCount() > 0
 						startMirror()
-						for (const client of wss.clients) {
-							if (
-								(client as ExtWebSocket).isProvider &&
-								client.readyState === WebSocket.OPEN
-							) {
-								client.send(JSON.stringify({ type: "consumer_joined" }))
-							}
+						if (!hadConsumers) {
+							notifyProviders("consumer_joined")
 						}
 						return
 					}
 
 					if (msg.type === "stop-mirror") {
 						stopMirror()
-						for (const client of wss.clients) {
-							if (
-								(client as ExtWebSocket).isProvider &&
-								client.readyState === WebSocket.OPEN
-							) {
-								client.send(JSON.stringify({ type: "consumer_left" }))
-							}
+						if (getConsumerCount() === 0) {
+							notifyProviders("consumer_left")
 						}
 						return
 					}
@@ -385,17 +395,11 @@ export async function createWsServer(
 			})
 
 			ws.on("close", () => {
-				if ((ws as ExtWebSocket).isConsumer) {
-					for (const client of wss.clients) {
-						if (
-							(client as ExtWebSocket).isProvider &&
-							client.readyState === WebSocket.OPEN
-						) {
-							client.send(JSON.stringify({ type: "consumer_left" }))
-						}
-					}
-				}
+				const wasConsumer = (ws as ExtWebSocket).isConsumer
 				stopMirror()
+				if (wasConsumer && getConsumerCount() === 0) {
+					notifyProviders("consumer_left")
+				}
 				logger.info("Client disconnected")
 			})
 

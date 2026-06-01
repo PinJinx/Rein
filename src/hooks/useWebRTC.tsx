@@ -13,7 +13,7 @@ type SignalingMessage =
 
 export function useWebRTC(
 	send: (msg: unknown) => void,
-	onTrack: (stream: MediaStream) => void,
+	onTrack: (stream: MediaStream | null) => void,
 ) {
 	const pcRef = useRef<RTCPeerConnection | null>(null)
 	const dcUnorderedRef = useRef<RTCDataChannel | null>(null)
@@ -98,11 +98,26 @@ export function useWebRTC(
 
 		pc.onconnectionstatechange = () => {
 			console.log("[RTC] Connection State:", pc.connectionState)
+			if (
+				pc.connectionState === "failed" ||
+				pc.connectionState === "disconnected" ||
+				pc.connectionState === "closed"
+			) {
+				onTrack(null)
+			}
 		}
 
 		pc.ontrack = (event) => {
 			console.log("[RTC] track received")
 			const stream = event.streams[0] ?? new MediaStream([event.track])
+			event.track.addEventListener(
+				"ended",
+				() => {
+					console.log("[RTC] track ended")
+					onTrack(null)
+				},
+				{ once: true },
+			)
 			onTrack(stream)
 		}
 
@@ -130,41 +145,41 @@ export function useWebRTC(
 
 	const handleSignalingMessage = useCallback(
 		async (msg: SignalingMessage) => {
-			if (msg.type === "offer") {
-				if (!pcRef.current) {
-					pcRef.current = createPeerConnection()
-				}
-				const pc = pcRef.current
-				await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp))
-
-				for (const c of pendingIceCandidatesRef.current) {
-					await pc.addIceCandidate(c)
-				}
-				pendingIceCandidatesRef.current = []
-
-				const answer = await pc.createAnswer()
-				await pc.setLocalDescription(answer)
-				sendRef.current({ type: "answer", sdp: pc.localDescription })
-			} else if (msg.type === "answer") {
-				const pc = pcRef.current
-				if (pc) {
+			try {
+				if (msg.type === "offer") {
+					if (!pcRef.current) {
+						pcRef.current = createPeerConnection()
+					}
+					const pc = pcRef.current
 					await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp))
+
 					for (const c of pendingIceCandidatesRef.current) {
 						await pc.addIceCandidate(c)
 					}
 					pendingIceCandidatesRef.current = []
-				}
-			} else if (msg.type === "ice-candidate") {
-				const pc = pcRef.current
-				if (pc?.remoteDescription) {
-					try {
-						await pc.addIceCandidate(new RTCIceCandidate(msg.candidate))
-					} catch (e) {
-						console.error("[RTC] Failed to add ICE candidate", e)
+
+					const answer = await pc.createAnswer()
+					await pc.setLocalDescription(answer)
+					sendRef.current({ type: "answer", sdp: pc.localDescription })
+				} else if (msg.type === "answer") {
+					const pc = pcRef.current
+					if (pc) {
+						await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp))
+						for (const c of pendingIceCandidatesRef.current) {
+							await pc.addIceCandidate(c)
+						}
+						pendingIceCandidatesRef.current = []
 					}
-				} else {
-					pendingIceCandidatesRef.current.push(msg.candidate)
+				} else if (msg.type === "ice-candidate") {
+					const pc = pcRef.current
+					if (pc?.remoteDescription) {
+						await pc.addIceCandidate(new RTCIceCandidate(msg.candidate))
+					} else {
+						pendingIceCandidatesRef.current.push(msg.candidate)
+					}
 				}
+			} catch (e) {
+				console.error("[RTC] Failed to handle signaling message", e)
 			}
 		},
 		[createPeerConnection],
@@ -187,11 +202,23 @@ export function useWebRTC(
 		}
 	}, [])
 
+	const closePeerConnection = useCallback(() => {
+		if (pcRef.current) {
+			pcRef.current.close()
+			pcRef.current = null
+		}
+
+		dcUnorderedRef.current = null
+		dcOrderedRef.current = null
+		pendingIceCandidatesRef.current = []
+	}, [])
+
 	return {
 		pcRef,
 		createPeerConnection,
 		handleSignalingMessage,
 		sendInput,
+		closePeerConnection,
 		configureMediaSender,
 	}
 }
