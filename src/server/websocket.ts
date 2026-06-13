@@ -3,7 +3,8 @@ import type { IncomingMessage } from "node:http"
 import type { Socket } from "node:net"
 import { WebSocket, WebSocketServer } from "ws"
 import logger from "../utils/logger"
-import { InputHandler, type InputMessage } from "./InputHandler"
+import type { InputMessage } from "./types"
+import { InputHandler } from "./InputHandler"
 import { getLocalIp } from "./getLocalIp"
 
 import {
@@ -40,14 +41,13 @@ export async function createWsServer(
 			logger.warn(`Invalid server-config.json, using defaults: ${String(e)}`)
 		}
 	}
-	const inputThrottleMs =
+	const _inputThrottleMs =
 		typeof serverConfig.inputThrottleMs === "number" &&
 		serverConfig.inputThrottleMs > 0
 			? serverConfig.inputThrottleMs
 			: 8
 
 	const wss = new WebSocketServer({ noServer: true })
-	const inputHandler = new InputHandler(inputThrottleMs)
 	let LAN_IP = "127.0.0.1"
 	try {
 		LAN_IP = await getLocalIp()
@@ -121,7 +121,7 @@ export async function createWsServer(
 			// Localhost: only store token if it's already known (trusted scan)
 			// Remote: token is already validated in the upgrade handler
 			logger.info(`Client connected from ${request.socket.remoteAddress}`)
-
+			const inputHandler: InputHandler = new InputHandler()
 			if (token && (isKnownToken(token) || !isLocal)) {
 				storeToken(token)
 			}
@@ -225,6 +225,7 @@ export async function createWsServer(
 					}
 
 					if (msg.type === "start-provider") {
+						inputHandler.updateConfig(msg.config ?? {})
 						;(ws as ExtWebSocket).isProvider = true
 						logger.info("Client registered as Screen Provider")
 						return
@@ -343,8 +344,10 @@ export async function createWsServer(
 						"text",
 						"zoom",
 						"combo",
+						"update-settings",
 						"copy",
 						"paste",
+						"touch",
 					]
 					if (!msg.type || !VALID_INPUT_TYPES.includes(msg.type)) {
 						logger.warn(`Unknown message type: ${msg.type}`)

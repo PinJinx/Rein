@@ -8,7 +8,6 @@ import { TouchArea } from "../components/Trackpad/TouchArea"
 import { useRemoteConnection } from "../hooks/useRemoteConnection"
 import { useTrackpadGesture } from "../hooks/useTrackpadGesture"
 import { ScreenMirror } from "../components/Trackpad/ScreenMirror"
-
 export const Route = createFileRoute("/trackpad")({
 	component: TrackpadPage,
 })
@@ -19,31 +18,14 @@ function TrackpadPage() {
 	const [buffer, setBuffer] = useState<string[]>([])
 	const bufferText = buffer.join(" + ")
 	const hiddenInputRef = useRef<HTMLInputElement>(null)
+	const canvasRef = useRef<HTMLCanvasElement>(null)
 	const isComposingRef = useRef(false)
 	const [keyboardOpen, setKeyboardOpen] = useState(false)
 	const [extraKeysVisible, setExtraKeysVisible] = useState(true)
-
-	// Load Client Settings
-	const [sensitivity] = useState(() => {
-		if (typeof window === "undefined") return 1.0
-		const s = localStorage.getItem("rein_sensitivity")
-		return s ? Number.parseFloat(s) : 1.0
-	})
-
-	const [invertScroll] = useState(() => {
-		if (typeof window === "undefined") return false
-		const s = localStorage.getItem("rein_invert")
-		return s ? JSON.parse(s) : false
-	})
-
 	const { send, sendCombo } = useRemoteConnection()
-	// Pass sensitivity and invertScroll to the gesture hook
-	const { isTracking, handlers } = useTrackpadGesture(
-		send,
-		scrollMode,
-		sensitivity,
-		invertScroll,
-	)
+	const gesture = useTrackpadGesture(send, scrollMode)
+
+	const { isTracking, handlers } = gesture
 
 	// When keyboardOpen changes, focus or blur the hidden input
 	useEffect(() => {
@@ -228,6 +210,7 @@ function TrackpadPage() {
 					isTracking={isTracking}
 					scrollMode={scrollMode}
 					handlers={handlers}
+					canvasRef={canvasRef}
 				/>
 				{bufferText !== "" && <BufferBar bufferText={bufferText} />}
 			</div>

@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-import { useRef } from "react"
 import { useConnection } from "../../contexts/ConnectionProvider"
 import { useMirrorStream } from "../../hooks/useMirrorStream"
 
@@ -9,6 +8,7 @@ interface ScreenMirrorProps {
 	scrollMode: boolean
 	isTracking: boolean
 	handlers: React.HTMLAttributes<HTMLDivElement>
+	canvasRef: React.RefObject<HTMLCanvasElement | null>
 }
 
 const TEXTS = {
@@ -20,9 +20,9 @@ export const ScreenMirror = ({
 	scrollMode,
 	isTracking,
 	handlers,
+	canvasRef,
 }: ScreenMirrorProps) => {
 	const { wsRef, status } = useConnection()
-	const canvasRef = useRef<HTMLCanvasElement>(null)
 	const { hasFrame } = useMirrorStream(wsRef, canvasRef, status)
 
 	return (
