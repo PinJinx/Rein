@@ -1,43 +1,54 @@
 "use client"
 
 import type React from "react"
-import { useConnection } from "../../contexts/ConnectionProvider"
-import { useMirrorStream } from "../../hooks/useMirrorStream"
+import { useEffect, useRef } from "react"
 
 interface ScreenMirrorProps {
 	scrollMode: boolean
 	isTracking: boolean
 	handlers: React.HTMLAttributes<HTMLDivElement>
-	canvasRef: React.RefObject<HTMLCanvasElement | null>
+	videoStream: MediaStream | null
+	trackActive: boolean
 }
 
 const TEXTS = {
-	WAITING: "Waiting for screen...",
-	AUTOMATIC: "Mirroring will start automatically",
+	WAITING: "Connecting to host desktop...",
+	AUTOMATIC: "Establishing secure low-latency WebRTC connection",
 }
 
 export const ScreenMirror = ({
 	scrollMode,
 	isTracking,
 	handlers,
-	canvasRef,
+	videoStream,
+	trackActive,
 }: ScreenMirrorProps) => {
-	const { wsRef, status } = useConnection()
-	const { hasFrame } = useMirrorStream(wsRef, canvasRef, status)
+	const videoElementRef = useRef<HTMLVideoElement | null>(null)
+
+	useEffect(() => {
+		if (videoElementRef.current && videoStream) {
+			videoElementRef.current.srcObject = videoStream
+			videoElementRef.current.play().catch(() => {})
+		}
+	}, [videoStream])
 
 	return (
 		<div className="absolute inset-0 flex items-center justify-center bg-black overflow-hidden select-none touch-none">
-			{/* Mirror Canvas */}
-			<canvas
-				ref={canvasRef}
+			{/* Hardware Accelerated Video Renderer */}
+			<video
+				ref={videoElementRef}
+				autoPlay
+				playsInline
+				muted
+				controls={false}
 				className={`w-full h-full object-contain transition-opacity duration-500 ${
-					hasFrame ? "opacity-100" : "opacity-0"
+					trackActive ? "opacity-100" : "opacity-0"
 				}`}
 			/>
 
-			{/* Standby UI */}
-			{!hasFrame && (
-				<div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 gap-4">
+			{/* Standby Loading UI */}
+			{!trackActive && (
+				<div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 gap-4 bg-base-300">
 					<div className="loading loading-spinner loading-lg text-primary" />
 					<div className="text-center px-6">
 						<p className="font-semibold text-lg">{TEXTS.WAITING}</p>
@@ -46,7 +57,7 @@ export const ScreenMirror = ({
 				</div>
 			)}
 
-			{/* Transparent Gesture Overlay */}
+			{/* Gesture Event Interaction Overlay */}
 			<div
 				className="absolute inset-0 z-10"
 				{...handlers}

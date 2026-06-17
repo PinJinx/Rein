@@ -5,7 +5,7 @@ import viteReact from "@vitejs/plugin-react"
 import { nitro } from "nitro/vite"
 import { defineConfig } from "vite"
 import serverConfig from "./src/server-config.json"
-import { createWsServer } from "./src/server/websocket"
+import { attachSignalingRoutes } from "./src/server/server"
 
 const config = defineConfig({
 	base: "/",
@@ -16,16 +16,16 @@ const config = defineConfig({
 	},
 	plugins: [
 		{
-			name: "websocket-server",
+			name: "rein-server",
 			async configureServer(server) {
 				const httpServer = server.httpServer
 				if (!httpServer) return
-				await createWsServer(httpServer)
+				attachSignalingRoutes(httpServer)
 			},
 			async configurePreviewServer(server) {
 				const httpServer = server.httpServer
 				if (!httpServer) return
-				await createWsServer(httpServer)
+				attachSignalingRoutes(httpServer)
 			},
 		},
 		devtools(),

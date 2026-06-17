@@ -12,7 +12,6 @@ import {
 	ConnectionProvider,
 	useConnection,
 } from "../contexts/ConnectionProvider"
-import { useCaptureProvider } from "../hooks/useCaptureProvider"
 
 export const Route = createRootRoute({
 	component: AppWithConnection,
@@ -37,32 +36,10 @@ function AppWithConnection() {
 function RootComponent() {
 	return (
 		<RootDocument>
-			<DesktopCaptureProvider />
 			<Outlet />
 			{/* <TanStackRouterDevtools position="bottom-right" /> */}
 		</RootDocument>
 	)
-}
-
-function DesktopCaptureProvider() {
-	const { wsRef, status } = useConnection()
-	const { startSharing } = useCaptureProvider(wsRef)
-	const hasStartedRef = useRef(false)
-
-	useEffect(() => {
-		if (status !== "connected" || hasStartedRef.current) return
-
-		// Mobile detection: avoid auto-start on mobile
-		const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
-		const canShare = !!navigator.mediaDevices?.getDisplayMedia
-
-		if (!isMobile && canShare) {
-			hasStartedRef.current = true
-			startSharing()
-		}
-	}, [status, startSharing])
-
-	return null
 }
 
 function ThemeInit() {
