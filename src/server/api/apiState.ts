@@ -3,6 +3,7 @@
  */
 
 import type { ServerResponse } from "node:http"
+import { AsyncLocalStorage } from "node:async_hooks"
 import { getActiveToken, generateToken, storeToken } from "../tokenStore"
 import { HostRunner } from "../gstreamer/hostRunner"
 import type { InputPeerConnection } from "./InputPeerConnection"
@@ -32,6 +33,8 @@ export interface Session {
 }
 
 export type HostStatus = "stopped" | "starting" | "running" | "error"
+
+export const reinStorage = new AsyncLocalStorage<boolean>()
 
 export const sessions = new Map<string, Session>()
 export const sseClients = new Map<string, Set<ServerResponse>>()
@@ -66,7 +69,9 @@ export function pushEvent(
 	const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
 	for (const res of clients) {
 		try {
-			res.write(payload)
+			reinStorage.run(true, () => {
+				res.write(payload)
+			})
 		} catch {
 			clients.delete(res)
 		}

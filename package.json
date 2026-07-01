@@ -98,5 +98,11 @@
 			"target": "dmg"
 		}
 	},
-	"allowScripts": {}
+	"allowScripts": {
+		"electron@40.10.5": true,
+		"electron-winstaller@5.4.0": true,
+		"esbuild@0.28.1": true,
+		"koffi@2.16.2": true,
+		"node-datachannel@0.32.3": true
+	}
 }

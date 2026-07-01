@@ -28,6 +28,7 @@ import {
 	setPendingConfigUpdates,
 	pushEvent,
 	ensureHostRunnerActive,
+	reinStorage,
 } from "./apiState"
 
 // --- Auth & Request Utilities ---
@@ -43,8 +44,10 @@ export function requireLocalhost(
 	res: ServerResponse,
 ): boolean {
 	if (isLocalRequest(req)) return true
-	res.writeHead(403, { "Content-Type": "application/json" })
-	res.end(JSON.stringify({ error: "Localhost only" }))
+	reinStorage.run(true, () => {
+		res.writeHead(403, { "Content-Type": "application/json" })
+		res.end(JSON.stringify({ error: "Localhost only" }))
+	})
 	return false
 }
 
@@ -65,8 +68,10 @@ export function requireAuth(
 	}
 
 	if (!token || !isKnownToken(token)) {
-		res.writeHead(401, { "Content-Type": "application/json" })
-		res.end(JSON.stringify({ error: "Unauthorized" }))
+		reinStorage.run(true, () => {
+			res.writeHead(401, { "Content-Type": "application/json" })
+			res.end(JSON.stringify({ error: "Unauthorized" }))
+		})
 		return false
 	}
 
@@ -76,11 +81,13 @@ export function requireAuth(
 
 export function json(res: ServerResponse, status: number, body: unknown): void {
 	const payload = JSON.stringify(body)
-	res.writeHead(status, {
-		"Content-Type": "application/json",
-		"Content-Length": Buffer.byteLength(payload),
+	reinStorage.run(true, () => {
+		res.writeHead(status, {
+			"Content-Type": "application/json",
+			"Content-Length": Buffer.byteLength(payload),
+		})
+		res.end(payload)
 	})
-	res.end(payload)
 }
 
 export async function readBody(req: IncomingMessage): Promise<string> {
@@ -352,7 +359,9 @@ export function handleEvents(req: IncomingMessage, res: ServerResponse): void {
 
 	const keepAlive = setInterval(() => {
 		try {
-			res.write(": keepalive\n\n")
+			reinStorage.run(true, () => {
+				res.write(": keepalive\n\n")
+			})
 		} catch {
 			clearInterval(keepAlive)
 		}
@@ -703,26 +712,28 @@ export async function handleWhipSignalingExchange(
 
 	let checkCount = 0
 	const answerCheckInterval = setInterval(() => {
-		const activeSession = sessions.get(sessionId)
-		checkCount++
+		reinStorage.run(true, () => {
+			const activeSession = sessions.get(sessionId)
+			checkCount++
 
-		if (activeSession?.answer) {
-			clearInterval(answerCheckInterval)
-			res.writeHead(201, {
-				"Content-Type": "application/sdp",
-				Location: `/api/webrtc/whip?sessionId=${sessionId}`,
-			})
-			res.end(activeSession.answer)
-			logger.info(`WHIP handshake complete for session: ${sessionId}`)
-		} else if (
-			checkCount >= 50 ||
-			!activeSession ||
-			activeSession.state === "closed"
-		) {
-			clearInterval(answerCheckInterval)
-			res.writeHead(408, { "Content-Type": "application/json" })
-			res.end(JSON.stringify({ error: "WHIP signaling handshake timeout" }))
-		}
+			if (activeSession?.answer) {
+				clearInterval(answerCheckInterval)
+				res.writeHead(201, {
+					"Content-Type": "application/sdp",
+					Location: `/api/webrtc/whip?sessionId=${sessionId}`,
+				})
+				res.end(activeSession.answer)
+				logger.info(`WHIP handshake complete for session: ${sessionId}`)
+			} else if (
+				checkCount >= 50 ||
+				!activeSession ||
+				activeSession.state === "closed"
+			) {
+				clearInterval(answerCheckInterval)
+				res.writeHead(408, { "Content-Type": "application/json" })
+				res.end(JSON.stringify({ error: "WHIP signaling handshake timeout" }))
+			}
+		})
 	}, 100)
 	req.on("close", () => clearInterval(answerCheckInterval))
 }

@@ -3,8 +3,8 @@
  */
 
 import type { IncomingMessage, ServerResponse } from "node:http"
-import { AsyncLocalStorage } from "node:async_hooks"
 import logger from "../utils/logger"
+import { reinStorage } from "./api/apiState"
 import {
 	handleCreateSession,
 	handleGetSession,
@@ -83,8 +83,6 @@ const routes: Route[] = [
 		handler: handleWhipSignalingExchange,
 	},
 ]
-
-const reinStorage = new AsyncLocalStorage<boolean>()
 
 export function attachSignalingRoutes(
 	server: NonNullable<import("vite").ViteDevServer["httpServer"]>,
