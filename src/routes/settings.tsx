@@ -164,10 +164,12 @@ function SettingsPage() {
 		textArea.select()
 		textArea.setSelectionRange(0, text.length)
 
-		const copiedText = document.execCommand("copy")
-		document.body.removeChild(textArea)
-
-		return copiedText
+		try {
+			const copiedText = document.execCommand("copy")
+			return copiedText
+		} finally {
+			document.body.removeChild(textArea)
+		}
 	}
 
 	return (
