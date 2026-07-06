@@ -408,7 +408,9 @@ function SettingsPage() {
 											}
 										}}
 									>
-										{copied ? t("settings", "copied") : t("settings", "copyLink")}
+										{copied
+											? t("settings", "copied")
+											: t("settings", "copyLink")}
 									</button>
 									{copyError && (
 										<p className="text-error text-xs text-center max-w-xs">
