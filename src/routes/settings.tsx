@@ -8,10 +8,35 @@ export const Route = createFileRoute("/settings")({
 	component: SettingsPage,
 })
 
+const copyWithFallback = (text: string) => {
+	const textArea = document.createElement("textarea")
+	textArea.value = text
+	textArea.setAttribute("readonly", "")
+	textArea.style.position = "absolute"
+	textArea.style.left = "-9999px"
+
+	document.body.appendChild(textArea)
+	textArea.select()
+	textArea.setSelectionRange(0, text.length)
+
+	try {
+		return document.execCommand("copy")
+	} finally {
+		document.body.removeChild(textArea)
+	}
+}
+
 function SettingsPage() {
 	const [ip, setIp] = useState("")
 	const [copied, setCopied] = useState(false)
 	const [copyError, setCopyError] = useState("")
+	const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+	useEffect(() => {
+		return () => {
+			if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+		}
+	}, [])
 	const [frontendPort, setFrontendPort] = useState("")
 	const [originalPort] = useState(String(serverConfig.frontendPort))
 	const serverConfigChanged =
@@ -153,24 +178,7 @@ function SettingsPage() {
 			.catch((e) => console.error("IP fetch error:", e))
 	}, [])
 
-	const copyWithFallback = (text: string) => {
-		const textArea = document.createElement("textarea")
-		textArea.value = text
-		textArea.setAttribute("readonly", "")
-		textArea.style.position = "absolute"
-		textArea.style.left = "-9999px"
 
-		document.body.appendChild(textArea)
-		textArea.select()
-		textArea.setSelectionRange(0, text.length)
-
-		try {
-			const copiedText = document.execCommand("copy")
-			return copiedText
-		} finally {
-			document.body.removeChild(textArea)
-		}
-	}
 
 	return (
 		<div className="h-full overflow-y-auto w-full">
@@ -402,9 +410,17 @@ function SettingsPage() {
 												}
 
 												setCopied(true)
-												setTimeout(() => setCopied(false), 2000)
+												if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+												copyTimerRef.current = setTimeout(() => {
+													setCopied(false)
+													copyTimerRef.current = null
+												}, 2000)
 											} catch (err) {
 												console.error("Failed to copy URL:", err)
+												if (copyTimerRef.current) {
+													clearTimeout(copyTimerRef.current)
+													copyTimerRef.current = null
+												}
 												setCopied(false)
 												setCopyError(t("settings", "copyFailed"))
 											}
