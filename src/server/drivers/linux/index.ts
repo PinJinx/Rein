@@ -169,6 +169,11 @@ export class LinuxInputInjector {
 		}
 		this.config = { ...DEFAULT_CONFIG, ...config }
 		this.initialize()
+		if (!this.initialized) {
+			throw new Error(
+				"Linux virtual input devices failed to initialize (check /dev/uinput permissions)",
+			)
+		}
 	}
 
 	updateConfig(config: Partial<InputConfig>): void {
@@ -258,7 +263,7 @@ export class LinuxInputInjector {
 			console.error(
 				"[LinuxInputInjector] One or more devices failed to initialize",
 			)
-			// Partial init
+			this.destroy()
 			this.initialized = mouseOk
 			return
 		}
