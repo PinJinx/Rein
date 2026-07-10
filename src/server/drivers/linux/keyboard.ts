@@ -28,6 +28,7 @@ export class LinuxKeyboard {
 		if (code !== undefined) {
 			this.sendKeyEvent(code, KEY_PRESS)
 			this.sendKeyEvent(code, KEY_RELEASE)
+			this.sync()
 		} else if (key.length === 1) {
 			this.injectText(key)
 		} else {
