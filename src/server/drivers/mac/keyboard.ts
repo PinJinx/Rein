@@ -25,7 +25,7 @@ const MEDIA_KEY_MAP: Record<string, number> = {
 }
 
 export class MacKeyboard {
-	injectKey(key: string): void {
+	injectKey(key: string, pos: string): void {
 		const lowerKey = key.toLowerCase()
 
 		// Media transport keys need NX_SYSDEFINED events, not keyboard keycodes
@@ -37,8 +37,8 @@ export class MacKeyboard {
 
 		const code = MAC_KEY_MAP[lowerKey]
 		if (code !== undefined) {
-			postKeyEvent(code, true)
-			postKeyEvent(code, false)
+			if (pos !== "RELEASE") postKeyEvent(code, true)
+			if (pos !== "HOLD") postKeyEvent(code, false)
 		} else if (key.length === 1) {
 			this.injectText(key)
 		} else {
