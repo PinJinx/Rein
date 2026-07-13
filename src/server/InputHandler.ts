@@ -199,9 +199,9 @@ export class InputHandler {
 					Math.sign(delta) * Math.min(Math.abs(delta) * 0.5, MAX_ZOOM_STEP)
 				const amount = Math.round(-scaled)
 				if (amount !== 0) {
-					this.injector.injectKey("control")
+					this.injector.injectKey("control", "HOLD")
 					this.injector.injectMouseWheel(0, amount)
-					this.injector.injectKey("control")
+					this.injector.injectKey("control", "RELEASE")
 				}
 				break
 			}

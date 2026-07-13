@@ -520,6 +520,14 @@ export async function handleInputOffer(
 		)
 	}
 
+	// Overlay any pending (unsaved) config
+	if (pendingConfigUpdates) {
+		if (typeof pendingConfigUpdates.sensitivity === "number")
+			initialSensitivity = pendingConfigUpdates.sensitivity
+		if (typeof pendingConfigUpdates.invertScroll === "boolean")
+			initialInvertScroll = pendingConfigUpdates.invertScroll
+	}
+
 	const inputPc = new InputPeerConnection(
 		sessionId,
 		(candidate, mid) => {

@@ -103,7 +103,7 @@ export class WindowsInputInjector {
 		const inputs: Array<Record<string, unknown>> = []
 
 		if (dy !== 0) {
-			const scrollAmount = this.config.invertScroll ? dy : -dy
+			const scrollAmount = this.config.invertScroll ? -dy : dy
 			inputs.push({
 				type: INPUT_MOUSE,
 				__pad: 0,
@@ -128,7 +128,9 @@ export class WindowsInputInjector {
 					mi: {
 						dx: 0,
 						dy: 0,
-						mouseData: Math.round(dx * WHEEL_DELTA),
+						mouseData: Math.round(
+							(this.config.invertScroll ? dx : -dx) * WHEEL_DELTA,
+						),
 						dwFlags: MOUSEEVENTF_HWHEEL,
 						time: 0,
 						dwExtraInfo: 0,
@@ -143,8 +145,8 @@ export class WindowsInputInjector {
 	}
 
 	// Keyboard
-	injectKey(key: string): void {
-		this.keyboard.injectKey(key)
+	injectKey(key: string, pos?: string): void {
+		this.keyboard.injectKey(key, pos ?? "")
 	}
 
 	injectCombo(keys: string[]): void {
