@@ -3,12 +3,40 @@ import QRCode from "qrcode"
 import { useEffect, useState, useRef } from "react"
 import { APP_CONFIG, THEMES } from "../config"
 import serverConfig from "../server-config.json"
+import { t } from "../utils/i18n"
 export const Route = createFileRoute("/settings")({
 	component: SettingsPage,
 })
 
+const copyWithFallback = (text: string) => {
+	const textArea = document.createElement("textarea")
+	textArea.value = text
+	textArea.setAttribute("readonly", "")
+	textArea.style.position = "absolute"
+	textArea.style.left = "-9999px"
+
+	document.body.appendChild(textArea)
+	textArea.select()
+	textArea.setSelectionRange(0, text.length)
+
+	try {
+		return document.execCommand("copy")
+	} finally {
+		document.body.removeChild(textArea)
+	}
+}
+
 function SettingsPage() {
 	const [ip, setIp] = useState("")
+	const [copied, setCopied] = useState(false)
+	const [copyError, setCopyError] = useState("")
+	const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+	useEffect(() => {
+		return () => {
+			if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+		}
+	}, [])
 	const [frontendPort, setFrontendPort] = useState("")
 	const [originalPort] = useState(String(serverConfig.frontendPort))
 	const serverConfigChanged =
@@ -356,12 +384,57 @@ function SettingsPage() {
 									</div>
 								)}
 
-								<a
-									className="link link-primary mt-2 break-all text-lg font-mono bg-base-100 px-4 py-2 rounded-lg inline-block max-w-full overflow-hidden text-ellipsis"
-									href={shareUrl}
-								>
-									{shareUrl.replace(`${protocol}//`, "")}
-								</a>
+								<div className="flex flex-col gap-2 mt-2 w-full px-4 items-center">
+									<a
+										className="link link-primary break-all text-lg font-mono bg-base-100 px-4 py-2 rounded-lg inline-block max-w-full overflow-hidden text-ellipsis"
+										href={shareUrl}
+									>
+										{shareUrl.replace(`${protocol}//`, "")}
+									</a>
+									<button
+										type="button"
+										className="btn btn-sm btn-outline w-full max-w-xs"
+										onClick={async () => {
+											setCopyError("")
+
+											try {
+												if (
+													window.isSecureContext &&
+													navigator.clipboard?.writeText
+												) {
+													await navigator.clipboard.writeText(shareUrl)
+												} else if (!copyWithFallback(shareUrl)) {
+													throw new Error("Clipboard copy failed")
+												}
+
+												setCopied(true)
+												if (copyTimerRef.current)
+													clearTimeout(copyTimerRef.current)
+												copyTimerRef.current = setTimeout(() => {
+													setCopied(false)
+													copyTimerRef.current = null
+												}, 2000)
+											} catch (err) {
+												console.error("Failed to copy URL:", err)
+												if (copyTimerRef.current) {
+													clearTimeout(copyTimerRef.current)
+													copyTimerRef.current = null
+												}
+												setCopied(false)
+												setCopyError(t("settings", "copyFailed"))
+											}
+										}}
+									>
+										{copied
+											? t("settings", "copied")
+											: t("settings", "copyLink")}
+									</button>
+									{copyError && (
+										<p className="text-error text-xs text-center max-w-xs">
+											{copyError}
+										</p>
+									)}
+								</div>
 							</div>
 						</div>
 
