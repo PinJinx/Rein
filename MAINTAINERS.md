@@ -17,13 +17,10 @@ This document lists the individuals fulfilling the key roles of [Maintainer](htt
 | Name | GitHub Username | Discord Username | Area / Focus |
 |------|-----------------|------------------|--------------|
 | Rituraj Basak | @imxade | @none | Project Guidance, Code Reviews, and Technical Direction |
-| Rohith K Pradeep | @pinjinx | @pinjinx | Project Guidance, Code Reviews, and Technical Direction |
-
 ---
 
 ## Maintainers
 
 | Name | GitHub Username | Discord Username | Area / Focus |
 |------|-----------------|------------------|--------------|
-| Rituraj Basak | @imxade | @none | Repository Maintenance, Releases, and Pull Request Merging |
 | Rohith K Pradeep | @pinjinx | @pinjinx | Repository Maintenance and Pull Request Merging |
