@@ -224,7 +224,7 @@ Below is the directory index for media assets used by the Rein project.
 ### 📁 Root Media Directories
 
 - 📂 **[Brand/Media Assets](./brand/Media-Assets/)** — Rein branding, banners, backdrops, and promotional assets.
-- 📂 **[Project Icons](./public/app_icons)** — Rein project logos and icons.
+- 📂 **[Project Icons](./public/app_icon/)** — Rein project logos and icons.
 
 ---
 
