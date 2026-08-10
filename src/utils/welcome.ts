@@ -54,7 +54,7 @@ export async function printWelcome(port: number): Promise<void> {
 		"",
 		`  ${row(str.localLabel, local, cyan)}`,
 		`  ${row(str.networkLabel, network)}`,
-		`  ${row("Remote", remoteUrl, green)}`,
+		`  ${row(str.remoteLabel, remoteUrl, green)}`,
 		`  ${row(str.debugLabel, debug, cyan)}`,
 		"",
 		`  ${divider}`,
@@ -63,7 +63,7 @@ export async function printWelcome(port: number): Promise<void> {
 	]
 
 	if (qrLines.length > 0) {
-		output.push("", `  ${gray("Scan QR code to connect the client:")}`, "")
+		output.push("", `  ${gray(str.scanQr)}`, "")
 		for (const qline of qrLines) {
 			output.push(`  ${qline}`)
 		}
