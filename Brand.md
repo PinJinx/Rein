@@ -60,7 +60,6 @@ Rein uses a dark, modern interface with a vibrant pink primary accent. Supportin
 | **Surface** | Rein Surface | `#252634` | `37, 38, 52` | `R-005` |
 | **Neutral** | Rein Slate | `#45495E` | `69, 73, 94` | `R-006` |
 | **Light Neutral** | Rein White | `#F5F5F5` | `245, 245, 245` | `R-007` |
-| **Muted Neutral** | Rein Muted | `#7A7A7A` | `122, 122, 122` | `R-008` |
 | **Error** | Rein Error | `#FF4D5A` | `255, 77, 90` | `R-009` |
 
 ### Colour Roles
@@ -224,7 +223,7 @@ Below is the directory index for media assets used by the Rein project.
 
 ### 📁 Root Media Directories
 
-- 📂 **[Brand/Media Assets](./Brand/Media%20Assets/)** — Rein branding, banners, backdrops, and promotional assets.
+- 📂 **[Brand/Media Assets](./brand/Media-Assets/)** — Rein branding, banners, backdrops, and promotional assets.
 - 📂 **[Project Icons](./Project%20Icons/)** — Rein project logos and icons.
 - 📂 **[Screenshots](./Screenshots/)** — Application screenshots and feature demonstrations.
 
@@ -243,92 +242,6 @@ Below is the directory index for media assets used by the Rein project.
 
 ---
 
-### 🚩 B. Social Media Banners
-
-**Directory Path**: `Brand/Media Assets/Banner/`
-
-| Asset Name | Format | Direct Link | Description |
-| :--- | :--- | :--- | :--- |
-| **Primary Banner** | PNG | [`banner_primary.png`](./Brand/Media%20Assets/Banner/banner_primary.png) | Main Rein social banner |
-| **Primary Banner Mockup** | PNG | [`banner_primary_mockup.png`](./Brand/Media%20Assets/Banner/banner_primary_mockup.png) | Profile/header preview |
-| **Secondary Banner** | PNG | [`banner_secondary.png`](./Brand/Media%20Assets/Banner/banner_secondary.png) | Minimal documentation or presentation banner |
-
----
-
-### 📹 C. Virtual Meeting Backdrops
-
-**Directory Path**: `Brand/Media Assets/Meeting Backdrops/`
-
-| Asset Name | Format | Direct Link | Description |
-| :--- | :--- | :--- | :--- |
-| **Backdrop 1** | PNG | [`backdrop1.png`](./Brand/Media%20Assets/Meeting%20Backdrops/backdrop1.png) | Primary Rein virtual meeting backdrop |
-| **Backdrop 2** | PNG | [`backdrop2.png`](./Brand/Media%20Assets/Meeting%20Backdrops/backdrop2.png) | Alternative Rein backdrop |
-| **Backdrop Mockup 1** | PNG | [`backdrop_mockup1.png`](./Brand/Media%20Assets/Meeting%20Backdrops/backdrop_mockup1.png) | Video call preview |
-| **Backdrop Mockup 2** | PNG | [`backdrop_mockup2.png`](./Brand/Media%20Assets/Meeting%20Backdrops/backdrop_mockup2.png) | Alternative video call preview |
-
----
-
-### 🎴 D. Project & Contributor Cards
-
-**Directory Path**: `Brand/Media Assets/Contributor Cards/`
-
-| Asset Name | Format | Direct Link | Description |
-| :--- | :--- | :--- | :--- |
-| **Card Front Template** | PNG | [`card_front.png`](./Brand/Media%20Assets/Contributor%20Cards/card_front.png) | Rein contributor card front |
-| **Card Back Template** | PNG | [`card_back.png`](./Brand/Media%20Assets/Contributor%20Cards/card_back.png) | Rein contributor card back |
-| **Card Mockup** | PNG | [`card_mockup.png`](./Brand/Media%20Assets/Contributor%20Cards/card_mockup.png) | Contributor card preview |
-
----
-
-### 📱 E. Social Media Post Templates
-
-**Directory Path**: `Brand/Media Assets/Social Media Posts/`
-
-| Asset Name | Format | Direct Link | Description |
-| :--- | :--- | :--- | :--- |
-| **Post Template 1** | PNG | [`post_template1.png`](./Brand/Media%20Assets/Social%20Media%20Posts/post_template1.png) | High-impact Rein announcement |
-| **Post Template 2** | PNG | [`post_template2.png`](./Brand/Media%20Assets/Social%20Media%20Posts/post_template2.png) | Informative/community content |
-| **Post Mockup** | PNG | [`post_mockup.png`](./Brand/Media%20Assets/Social%20Media%20Posts/post_mockup.png) | Example Rein project post |
-
----
-
-### 🏷️ F. Swags & Stickers
-
-**Directory Path**: `Brand/Media Assets/Swags/`
-
-| Asset Name | Format | Direct Link | Description |
-| :--- | :--- | :--- | :--- |
-| **Rein Sticker** | PNG | [`rein_sticker.png`](./Brand/Media%20Assets/Swags/rein_sticker.png) | Rein logo sticker |
-| **Rein Logomark Sticker** | PNG | [`rein_logomark.png`](./Brand/Media%20Assets/Swags/rein_logomark.png) | Standalone Rein mark |
-| **Remote Interface Graphic** | PNG | [`remote_interface.png`](./Brand/Media%20Assets/Swags/remote_interface.png) | Remote interaction themed graphic |
-
----
-
-### 🛠️ G. Useful Assets & Badges
-
-**Directory Path**: `Brand/Media Assets/Useful Assets/`
-
-| Asset Name | Format | Direct Link | Description |
-| :--- | :--- | :--- | :--- |
-| **Rein Logo Vector** | SVG | [`rein_logo.svg`](./Brand/Media%20Assets/Useful%20Assets/rein_logo.svg) | Scalable Rein logo |
-| **Rein Logomark** | SVG | [`rein_logomark.svg`](./Brand/Media%20Assets/Useful%20Assets/rein_logomark.svg) | Scalable Rein project mark |
-| **GSoC Badge** | SVG | [`gsoc_badge.svg`](./Brand/Media%20Assets/Useful%20Assets/gsoc_badge.svg) | GSoC-related project badge |
-| **Open Source Badge** | SVG | [`open_source.svg`](./Brand/Media%20Assets/Useful%20Assets/open_source.svg) | Open-source project badge |
-
----
-
-### 🎨 H. Project Logos & Icons
-
-**Directories**: [`Project Icons/PNGs`](./Project%20Icons/PNGs/) | [`Project Icons/SVGs`](./Project%20Icons/SVGs/)
-
-| Project Name | PNG Asset | SVG Asset |
-| :--- | :--- | :--- |
-| **Rein Logo** | [`rein_logo.png`](./Project%20Icons/PNGs/rein_logo.png) | [`rein_logo.svg`](./Project%20Icons/SVGs/rein_logo.svg) |
-| **Rein Dark Logo** | [`rein_dark_logo.png`](./Project%20Icons/PNGs/rein_dark_logo.png) | [`rein_dark_logo.svg`](./Project%20Icons/SVGs/rein_dark_logo.svg) |
-| **Rein Light Logo** | [`rein_light_logo.png`](./Project%20Icons/PNGs/rein_light_logo.png) | [`rein_light_logo.svg`](./Project%20Icons/SVGs/rein_light_logo.svg) |
-| **Rein Logomark** | [`rein_logomark.png`](./Project%20Icons/PNGs/rein_logomark.png) | [`rein_logomark.svg`](./Project%20Icons/SVGs/rein_logomark.svg) |
-
----
 
 ## 🤝 Summary Checklist for Contributors & Visitors
 
