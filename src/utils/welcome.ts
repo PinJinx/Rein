@@ -1,7 +1,7 @@
 import fs from "node:fs"
 import { fileURLToPath } from "node:url"
 import QRCode from "qrcode"
-import { getActiveToken, generateToken, storeToken } from "../server/tokenStore"
+import { getOrCreateActiveToken } from "../server/tokenStore"
 import { i18n } from "./i18n"
 import { getLanIp } from "./net"
 
@@ -13,12 +13,7 @@ export async function printWelcome(port: number): Promise<void> {
 	const network = `http://${lanIp}:${port}`
 	const debug = `${local}/debug`
 
-	let token = getActiveToken()
-	if (!token) {
-		token = generateToken()
-		storeToken(token)
-	}
-
+	const token = getOrCreateActiveToken()
 	const remoteUrl = `${network}/trackpad?token=${encodeURIComponent(token)}`
 
 	const bold = (t: string) => `\x1b[1m${t}\x1b[0m`
@@ -68,7 +63,7 @@ export async function printWelcome(port: number): Promise<void> {
 	]
 
 	if (qrLines.length > 0) {
-		output.push("", `  ${gray("Scan QR code to connect mobile trackpad:")}`, "")
+		output.push("", `  ${gray("Scan QR code to connect the client:")}`, "")
 		for (const qline of qrLines) {
 			output.push(`  ${qline}`)
 		}

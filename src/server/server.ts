@@ -2,12 +2,7 @@ import type { IncomingMessage, ServerResponse } from "node:http"
 import { Transform } from "node:stream"
 import logger from "../utils/logger"
 import winston from "winston"
-import {
-	getActiveToken,
-	generateToken,
-	storeToken,
-	isKnownToken,
-} from "./tokenStore"
+import { getOrCreateActiveToken, isKnownToken } from "./tokenStore"
 import { GstManager } from "./gstreamer/gstManager"
 import { WebRTCManager } from "./webRTC"
 import type { InputConfig } from "./types"
@@ -221,11 +216,7 @@ export function attachSignalingRoutes(server: any): void {
 				json(res, 403, { error: "Localhost only" })
 				return
 			}
-			let token = getActiveToken()
-			if (!token) {
-				token = generateToken()
-				storeToken(token)
-			}
+			const token = getOrCreateActiveToken()
 			json(res, 200, { token })
 			return
 		}

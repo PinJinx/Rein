@@ -117,6 +117,16 @@ export function getActiveToken(): string | null {
 	return sorted[0].token
 }
 
+/** Returns the active token, creating and storing a new one if none exists. */
+export function getOrCreateActiveToken(): string {
+	let token = getActiveToken()
+	if (!token) {
+		token = generateToken()
+		storeToken(token)
+	}
+	return token
+}
+
 /** Check if any tokens exist yet (first-run detection). */
 export function hasTokens(): boolean {
 	purgeExpired()
