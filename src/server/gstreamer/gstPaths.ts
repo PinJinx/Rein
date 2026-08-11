@@ -133,7 +133,13 @@ function bundledPaths(bundledRoot: string): GstPaths {
 	const libDir = path.join(bundledRoot, "lib")
 	const pluginDir = path.join(libDir, "gstreamer-1.0")
 	const pluginScannerDir = path.join(bundledRoot, "libexec", "gstreamer-1.0")
-	const registryPath = path.join(bundledRoot, "registry.bin")
+
+	let registryPath = path.join(bundledRoot, "registry.bin")
+	try {
+		fs.accessSync(bundledRoot, fs.constants.W_OK)
+	} catch {
+		registryPath = path.join(os.tmpdir(), "rein-gstreamer-registry.bin")
+	}
 
 	const env: Record<string, string> = {
 		GST_PLUGIN_PATH: pluginDir,

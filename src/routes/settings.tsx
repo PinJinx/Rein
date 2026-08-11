@@ -128,7 +128,11 @@ function SettingsPage() {
 	// Auto-generate token on settings page load (localhost only)
 	useEffect(() => {
 		if (typeof window === "undefined") return
-		if (window.location.hostname !== "localhost") return
+		const isLocal =
+			window.location.hostname === "localhost" ||
+			window.location.hostname === "127.0.0.1" ||
+			window.location.hostname === "::1"
+		if (!isLocal) return
 
 		let isMounted = true
 
@@ -163,10 +167,14 @@ function SettingsPage() {
 			.catch((e) => console.error("QR Error:", e))
 	}, [ip, shareUrl])
 
-	// Effect: Auto-detect LAN IP from Server (only if on localhost)
+	// Effect: Auto-detect LAN IP from Server (only if on loopback/localhost)
 	useEffect(() => {
 		if (typeof window === "undefined") return
-		if (window.location.hostname !== "localhost") return
+		const isLocal =
+			window.location.hostname === "localhost" ||
+			window.location.hostname === "127.0.0.1" ||
+			window.location.hostname === "::1"
+		if (!isLocal) return
 
 		fetch("/api/host/ip")
 			.then((res) => res.json())

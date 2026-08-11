@@ -1,7 +1,9 @@
 {
 	"main": "electron/main.cjs",
 	"name": "app",
-	"version": "1.0.0",
+	"version": "0.1.0",
+	"description": "Rein Desktop Streaming Server",
+	"author": "AOSSIE",
 	"private": true,
 	"type": "module",
 	"scripts": {
@@ -93,7 +95,7 @@
 			"electron/**/*",
 			"package.json"
 		],
-		"npmRebuild": true,
+		"npmRebuild": false,
 		"linux": {
 			"target": "AppImage"
 		},
