@@ -12,6 +12,7 @@ let gstManager: GstManager | null = null
 let webrtcManager: WebRTCManager | null = null
 let hostStatus: "stopped" | "starting" | "running" | "error" = "stopped"
 let lastReportedLatencyMs: number | null = null
+let signalingAttached = false
 
 const sseClients = new Set<ServerResponse>()
 
@@ -121,6 +122,8 @@ function getEffectiveHostStatus():
 // biome-ignore lint/suspicious/noExplicitAny: Vite server instance
 export function attachSignalingRoutes(server: any): void {
 	const httpServer = server.httpServer || server
+	if (signalingAttached) return
+	signalingAttached = true
 
 	if (!webrtcManager && httpServer) {
 		webrtcManager = new WebRTCManager(httpServer)
@@ -307,13 +310,23 @@ export function attachSignalingRoutes(server: any): void {
 	if (server.middlewares) {
 		server.middlewares.use(handleApiRequest)
 	} else if (httpServer && typeof httpServer.on === "function") {
-		httpServer.on("request", handleApiRequest)
+		const existingListeners = httpServer.listeners("request") as Function[]
+		httpServer.removeAllListeners("request")
+		httpServer.on("request", (req: IncomingMessage, res: ServerResponse) => {
+			const next = () => {
+				for (const listener of existingListeners) {
+					listener.call(httpServer, req, res)
+				}
+			}
+			handleApiRequest(req, res, next)
+		})
 	}
 
 	logger.info("Signaling HTTP routes and WebSocket attached")
 }
 
 export async function stopServer() {
+	signalingAttached = false
 	if (webrtcManager) webrtcManager.shutdown()
 	if (gstManager) await gstManager.stop()
 }
