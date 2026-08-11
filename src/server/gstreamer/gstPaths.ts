@@ -62,38 +62,13 @@ export interface ServerConfig {
 	disableBundledGstreamer?: boolean
 }
 
+import { loadServerConfig as readServerConfig } from "../../utils/configHelper"
+
 /**
  * Loads server configuration from server-config.json if available.
  */
 function loadServerConfig(): ServerConfig {
-	const currentFile = fileURLToPath(import.meta.url)
-	const candidates = [
-		path.join(path.dirname(currentFile), "..", "..", "server-config.json"),
-		path.join(PROJECT_ROOT, "src", "server-config.json"),
-		path.join(PROJECT_ROOT, "server-config.json"),
-	]
-
-	// Support Electron resources path if packaged
-	const resourcesPath = (process as unknown as { resourcesPath?: string })
-		.resourcesPath
-	if (resourcesPath) {
-		candidates.unshift(
-			path.join(resourcesPath, "src", "server-config.json"),
-			path.join(resourcesPath, "server-config.json"),
-		)
-	}
-
-	for (const candidate of candidates) {
-		try {
-			if (fs.existsSync(candidate)) {
-				const raw = fs.readFileSync(candidate, "utf-8")
-				return JSON.parse(raw) as ServerConfig
-			}
-		} catch {
-			// ignore and try next candidate
-		}
-	}
-	return {}
+	return readServerConfig() as ServerConfig
 }
 
 /**

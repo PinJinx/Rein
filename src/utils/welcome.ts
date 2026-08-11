@@ -4,6 +4,7 @@ import QRCode from "qrcode"
 import { getOrCreateActiveToken } from "../server/tokenStore"
 import { i18n } from "./i18n"
 import { getLanIp } from "./net"
+import { loadServerConfig } from "./configHelper"
 
 const str = i18n.en.server
 
@@ -24,17 +25,9 @@ export async function printWelcome(port: number): Promise<void> {
 	const row = (label: string, value: string, color = green) =>
 		`${gray(label.padEnd(10))} ${color(value)}`
 
-	const configPath = fileURLToPath(
-		new URL("../server-config.json", import.meta.url),
-	)
 	// If logs enabled dont print welcomescreen
-	try {
-		const raw = fs.readFileSync(configPath, "utf-8")
-		const cfg = JSON.parse(raw) as { verboseLogs?: boolean }
-		if (cfg.verboseLogs === true) return
-	} catch {
-		// ignore
-	}
+	const cfg = loadServerConfig()
+	if (cfg.verboseLogs === true) return
 
 	let qrLines: string[] = []
 	try {

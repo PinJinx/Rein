@@ -32,7 +32,12 @@ const config = defineConfig({
 			configurePreviewServer: wireServer,
 		},
 		devtools(),
-		nitro(),
+		nitro({
+			plugins: ["./src/server/nitro-plugin"],
+			rollupConfig: {
+				external: ["koffi", "werift", "ws", "winston", "dbus-next", "eventsource"],
+			},
+		}),
 		tanstackStart(),
 		react({
 			babel: {

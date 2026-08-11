@@ -78,7 +78,9 @@
 		"asar": true,
 		"asarUnpack": [
 			".output/**/*",
-			"node_modules/@nut-tree-fork/**/*"
+			"node_modules/@nut-tree-fork/**/*",
+			"node_modules/koffi/**/*",
+			"node_modules/werift/**/*"
 		],
 		"extraResources": [
 			{
@@ -88,12 +90,18 @@
 			{
 				"from": "bin",
 				"to": "bin"
+			},
+			{
+				"from": "src/server-config.json",
+				"to": "src/server-config.json"
 			}
 		],
 		"files": [
 			".output/**/*",
 			"electron/**/*",
-			"package.json"
+			"package.json",
+			"node_modules/**/*",
+			"src/server-config.json"
 		],
 		"npmRebuild": false,
 		"linux": {

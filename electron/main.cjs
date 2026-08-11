@@ -10,11 +10,24 @@ let serverHost = '0.0.0.0';
 let serverPort = 3000;
 
 try {
-  const configPath = './src/server-config.json';
-  if (fs.existsSync(configPath)) {
-    const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-    if (config.host) serverHost = config.host;
-    if (config.frontendPort) serverPort = config.frontendPort;
+  const candidates = [
+    path.join(__dirname, '..', 'src', 'server-config.json'),
+    path.join(process.cwd(), 'src', 'server-config.json'),
+    path.join(process.cwd(), 'server-config.json'),
+  ];
+  if (process.resourcesPath) {
+    candidates.unshift(
+      path.join(process.resourcesPath, 'src', 'server-config.json'),
+      path.join(process.resourcesPath, 'server-config.json')
+    );
+  }
+  for (const configPath of candidates) {
+    if (fs.existsSync(configPath)) {
+      const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+      if (config.host) serverHost = config.host;
+      if (config.frontendPort) serverPort = config.frontendPort;
+      break;
+    }
   }
 } catch (e) {
   console.warn('Failed to load server config:', e);
@@ -53,8 +66,8 @@ function startServer() {
     console.log("Starting server from:", serverPath);
 
     serverProcess = spawn('node', [serverPath], {
-      stdio: 'ignore',       // no terminal
-      windowsHide: true,     // hide CMD
+      stdio: 'inherit',      // DEBUG: pipe server output to terminal
+      //windowsHide: true,     // hide CMD
       env: {
         ...process.env,
         HOST: serverHost,
