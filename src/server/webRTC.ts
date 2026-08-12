@@ -11,7 +11,7 @@ import { InputHandler } from "./InputHandler"
 import logger from "../utils/logger"
 import type { InputMessage, InputConfig } from "./types"
 import { isKnownToken } from "./tokenStore"
-import { RTP_HOST, RTP_PORT } from "./constants"
+import { ICE_PORT_MAX, ICE_PORT_MIN, RTP_HOST, RTP_PORT } from "./constants"
 import { loadServerConfig } from "../utils/configHelper"
 
 interface ClientSession {
@@ -207,6 +207,7 @@ export class WebRTCManager {
 
 			const pc = new RTCPeerConnection({
 				iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+				icePortRange: [ICE_PORT_MIN, ICE_PORT_MAX],
 				codecs: {
 					video: [
 						new RTCRtpCodecParameters({
