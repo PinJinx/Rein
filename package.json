@@ -75,7 +75,10 @@
 	"build": {
 		"appId": "com.rein.app",
 		"productName": "Rein",
-		"asar": false,
+		"asar": true,
+		"asarUnpack": [
+			"node_modules/koffi/**/*"
+		],
 		"extraResources": [
 			{
 				"from": ".output",
@@ -104,7 +107,7 @@
 			"target": "AppImage"
 		},
 		"win": {
-			"target": "portable"
+			"target": "nsis"
 		},
 		"mac": {
 			"target": "dmg"
