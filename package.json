@@ -75,13 +75,7 @@
 	"build": {
 		"appId": "com.rein.app",
 		"productName": "Rein",
-		"asar": true,
-		"asarUnpack": [
-			".output/**/*",
-			"node_modules/@nut-tree-fork/**/*",
-			"node_modules/koffi/**/*",
-			"node_modules/werift/**/*"
-		],
+		"asar": false,
 		"extraResources": [
 			{
 				"from": ".output",
@@ -94,13 +88,15 @@
 			{
 				"from": "src/server-config.json",
 				"to": "src/server-config.json"
+			},
+			{
+				"from": "node_modules",
+				"to": "node_modules"
 			}
 		],
 		"files": [
-			".output/**/*",
 			"electron/**/*",
 			"package.json",
-			"node_modules/**/*",
 			"src/server-config.json"
 		],
 		"npmRebuild": false,
