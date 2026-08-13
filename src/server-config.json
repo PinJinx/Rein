@@ -6,5 +6,6 @@
 	"sensitivity": 2.1,
 	"invertScroll": false,
 	"verboseLogs": true,
-	"useSystemGstreamer": false
+	"useSystemGstreamer": false,
+	"version": "0.1.0"
 }

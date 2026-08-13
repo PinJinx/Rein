@@ -3,6 +3,7 @@ import QRCode from "qrcode"
 import { useEffect, useState, useRef } from "react"
 import { APP_CONFIG, THEMES } from "../config"
 import serverConfig from "../server-config.json"
+import pkg from "../../package.json"
 import { t } from "../utils/i18n"
 export const Route = createFileRoute("/settings")({
 	component: SettingsPage,
@@ -441,7 +442,7 @@ function SettingsPage() {
 						</div>
 
 						<div className="text-xs text-center opacity-50 pt-8 pb-8">
-							Rein Remote v0.1.0
+							Rein Remote v{pkg.version}
 						</div>
 					</div>
 				</div>

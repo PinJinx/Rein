@@ -13,6 +13,7 @@ export interface ServerConfig {
 	useSystemGstreamer?: boolean
 	useGlobalGstreamer?: boolean
 	disableBundledGstreamer?: boolean
+	version?: string
 }
 
 /**
