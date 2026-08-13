@@ -51,13 +51,11 @@ function waitForServer(url, timeoutMs = 30000) {
 
 function startServer() {
   return new Promise((resolve, reject) => {
-    // .output and node_modules are copied via extraResources (straight copy,
-    // no electron-builder pruning). They land flat in resources/ as siblings,
-    // so Node.js resolution from resources/.output/server/ walks up to
-    // resources/node_modules/ and finds everything — including nested
-    // src/node_modules dirs that asarUnpack would strip.
+    // .output and koffi are unpacked via asarUnpack — real files on disk.
+    // werift, ws, winston are now bundled into index.mjs so no external deps needed.
     const serverPath = path.join(
       process.resourcesPath,
+      'app.asar.unpacked',
       '.output',
       'server',
       'index.mjs'
@@ -115,10 +113,20 @@ function startServer() {
 function createWindow() {
   if (mainWindow) return;
 
+  const iconPath = path.join(
+    process.resourcesPath,
+    'app.asar.unpacked',
+    '.output',
+    'public',
+    'app_icon',
+    'Icon512.png'
+  );
+
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     show: true,
+    icon: fs.existsSync(iconPath) ? iconPath : undefined,
   });
 
   mainWindow.loadURL(`http://localhost:${serverPort}`);

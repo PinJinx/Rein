@@ -22,7 +22,8 @@ export function getServerConfigPath(): string | null {
 	const candidates: string[] = []
 
 	// Electron resourcesPath if packaged
-	const resourcesPath = (process as unknown as { resourcesPath?: string }).resourcesPath
+	const resourcesPath = (process as unknown as { resourcesPath?: string })
+		.resourcesPath
 	if (resourcesPath) {
 		candidates.push(
 			path.join(resourcesPath, "src", "server-config.json"),

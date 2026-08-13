@@ -310,7 +310,10 @@ export function attachSignalingRoutes(server: any): void {
 	if (server.middlewares) {
 		server.middlewares.use(handleApiRequest)
 	} else if (httpServer && typeof httpServer.on === "function") {
-		const existingListeners = httpServer.listeners("request") as Function[]
+		const existingListeners = httpServer.listeners("request") as ((
+			req: IncomingMessage,
+			res: ServerResponse,
+		) => void)[]
 		httpServer.removeAllListeners("request")
 		httpServer.on("request", (req: IncomingMessage, res: ServerResponse) => {
 			const next = () => {

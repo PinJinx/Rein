@@ -1,5 +1,3 @@
-import fs from "node:fs"
-import { fileURLToPath } from "node:url"
 import QRCode from "qrcode"
 import { getOrCreateActiveToken } from "../server/tokenStore"
 import { i18n } from "./i18n"

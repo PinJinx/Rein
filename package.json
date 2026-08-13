@@ -50,6 +50,7 @@
 		"@tanstack/react-router-devtools": "^1.132.0",
 		"@testing-library/dom": "^10.4.0",
 		"@testing-library/react": "^16.2.0",
+		"@types/default-gateway": "^7.2.2",
 		"@types/node": "^22.10.2",
 		"@types/qrcode": "^1.5.5",
 		"@types/react": "^19.2.0",
@@ -77,13 +78,11 @@
 		"productName": "Rein",
 		"asar": true,
 		"asarUnpack": [
-			"node_modules/koffi/**/*"
+			".output/**/*",
+			"node_modules/koffi/**/*",
+			"node_modules/tslib/**/*"
 		],
 		"extraResources": [
-			{
-				"from": ".output",
-				"to": ".output"
-			},
 			{
 				"from": "bin",
 				"to": "bin"
@@ -91,15 +90,14 @@
 			{
 				"from": "src/server-config.json",
 				"to": "src/server-config.json"
-			},
-			{
-				"from": "node_modules",
-				"to": "node_modules"
 			}
 		],
 		"files": [
+			".output/**/*",
 			"electron/**/*",
 			"package.json",
+			"node_modules/koffi/**/*",
+			"node_modules/tslib/**/*",
 			"src/server-config.json"
 		],
 		"npmRebuild": false,
@@ -107,7 +105,8 @@
 			"target": "AppImage"
 		},
 		"win": {
-			"target": "nsis"
+			"target": "nsis",
+			"icon": "brand/Media-Assets/Icons/Icon512.png"
 		},
 		"mac": {
 			"target": "dmg"

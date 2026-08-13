@@ -5,8 +5,7 @@
 export const i18n = {
 	en: {
 		settings: {
-			copyLink: "Copy Link",
-			copied: "Copied!",
+			copied: "Copied to Clipboard!",
 			copyFailed:
 				"Could not copy the link automatically. Please copy it manually.",
 		},

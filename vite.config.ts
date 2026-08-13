@@ -35,7 +35,9 @@ const config = defineConfig({
 		nitro({
 			plugins: ["./src/server/nitro-plugin"],
 			rollupConfig: {
-				external: ["koffi", "werift", "ws", "winston", "dbus-next", "eventsource"],
+				// koffi: native C addon (.node binary), cannot be bundled
+				// dbus-next: Linux D-Bus only, never imported on Windows
+				external: ["koffi", "dbus-next"],
 			},
 		}),
 		tanstackStart(),
@@ -46,7 +48,7 @@ const config = defineConfig({
 		}),
 	],
 	ssr: {
-		external: ["dbus-next", "eventsource", "werift"],
+		external: ["dbus-next"],
 		noExternal: ["tailwindcss", "@tailwindcss/postcss"],
 	},
 	server: {
@@ -54,9 +56,7 @@ const config = defineConfig({
 		port: serverConfig.frontendPort,
 	},
 	build: {
-		rollupOptions: {
-			external: ["werift"],
-		},
+		rollupOptions: {},
 	},
 })
 
