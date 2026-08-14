@@ -164,7 +164,7 @@ jobs:
 
   # ── Create GitHub Release ─────────────────────────────────────────────────────
   release:
-    needs: [check-version, build-windows, build-linux, build-macos]
+    needs: [check-version, build-windows, build-linux] #, build-macos]
     if: needs.check-version.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     # Allow one job at a time to avoid duplicate releases
@@ -197,7 +197,7 @@ jobs:
           tag_name: ${{ needs.check-version.outputs.tag }}
           name: Rein ${{ needs.check-version.outputs.tag }}
           draft: false
-          prerelease: false
+          prerelease: true
           generate_release_notes: true
           files: |
             artifacts/windows/*.exe
