@@ -83,6 +83,9 @@ function startServer() {
         ...process.env,
         HOST: serverHost,
         PORT: serverPort.toString(),
+        // Provide a writable user-data directory so tokenStore.ts and other
+        // persistent state can write outside the read-only AppImage mount.
+        REIN_DATA_DIR: app.getPath('userData'),
       },
     });
 
