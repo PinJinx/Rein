@@ -188,7 +188,8 @@ Grant Accessibility permission to your terminal/IDE in System Settings → Priva
 ---
 
 ## Architecture
-<img width="1280" height="946" alt="Chart 1 (1)" src="https://github.com/user-attachments/assets/335632e6-de89-41fa-b9a7-fe222548e578" />
+
+<img width="1280" height="946" alt="Rein application architecture and data flow" src="https://github.com/user-attachments/assets/335632e6-de89-41fa-b9a7-fe222548e578" />
 
 ### At a glance
 
