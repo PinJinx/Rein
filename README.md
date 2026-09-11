@@ -1,26 +1,74 @@
-<div align="center">
-    <span>
-        <img src="public/app_icon/IconBg.png" width="128" height="128" alt="IconBg" />
-        <img src="https://github.com/user-attachments/assets/7f9e9c71-0714-4af7-9191-d3f7184b7193" width="128" height="128" alt="aossie_logo" />
-    </span>
-</div>
+<img width="1915" height="718" alt="Group 13 (1)" src="https://github.com/user-attachments/assets/371217bc-3606-409d-a4ab-2f5b32eae4a1" />
+
 
 # Rein
 
-A cross-platform, remote desktop (started as a couch keyboard replacement utilizing touch-screen devices following the **KISS principle**. It allows touchscreen devices and non touch desktop to act as a trackpad and keyboard for a desktop system through a locally served web interface. Think this could become some sort of standardization for cloud PC or cloud gaming interfaces, where all providers can push improvements and make them directly available to all platforms. Then upcoming providers would only need to think about the infrastructure. The project also bring better STT for Linux via phone and other platforms.
+Welcome to Rein. A **cross-platform LAN-based remote control and streaming system** that
+connects a host computer with browser-based clients over the local network.
 
-> Contributions are welcome! Please leave a star ⭐ to show your support.
+A client can be a **phone, tablet, laptop, desktop, or any other compatible
+browser-based device**. Use it to control the host with touch and pointer input,
+send keyboard commands, interact with the desktop remotely, and view the host's
+screen in real time.
 
-## Why?
+Rein is built to make remote interaction feel like a natural extension of the
+host machine rather than a separate remote-desktop application.
 
-Quality couch keyboards are not so accessible, STT on Linux isn’t in a good state, so we can take advantage of STT on mobile, plus use the phone as a controller for casual gaming.
+## What Rein Brings to the table
+
+Rein isn't just a remote trackpad. It brings together the essential tools
+for interacting with a computer remotely from input and streaming to
+gaming and file sharing.
+
+<div align="center">
+
+<img  width="180" height="139" alt="Gaming" src="https://github.com/user-attachments/assets/81498119-c351-4277-b3b5-91de1872d9d4" />
+&nbsp;
+<img  width="180" height="139" alt="Remote Access" src="https://github.com/user-attachments/assets/671cb147-3e8f-4540-954b-39fcb959a52a" />
+&nbsp;
+<img  width="180" height="139" alt="File Transfer" src="https://github.com/user-attachments/assets/cf385d77-386e-4616-955c-0e3cfca0b4a2" />
+&nbsp;
+<img  width="180" height="139" alt="Streaming" src="https://github.com/user-attachments/assets/0afa0607-c09c-42c2-85f4-3611176a243f" />
+
+</div>
+
+## Why Rein?
+
+A keyboard and mouse aren't always within reach.
+
+Your computer might be connected to a TV across the room, running a
+presentation, powering a game, hosting a remote machine, or sitting inside
+a cloud PC. In those moments, reaching for a keyboard and mouse isn't always
+the most convenient option.
+
+Your phone is already in your hand.
+
+**Rein turns it into the interface.**
+
+At its core, Rein is built around a simple idea: **any device can become an
+interface.**
+
+It provides a common layer for remote interaction across platforms and
+computing environments, bringing control, streaming, sharing, and gaming
+together in one experience.
+
+Whether you're sitting across the room or connecting to a cloud machine,
+Rein gives you a consistent way to interact with your computer.
+
+---
 
 ## Tech Stack
 
-*   **Framework**: [TanStack Start](https://tanstack.com/start)
-*   **Language**: TypeScript
-*   **Real-time**: WebRTC
-*   **Input Simulation**: Koffi
+<div align="center">
+<img src="https://github.com/user-attachments/assets/34d99ea7-b9ac-40b3-b32a-c758a376cc1f" height="55" alt="TanStack" />
+&nbsp;&nbsp;&nbsp;&nbsp;
+<img src="https://github.com/user-attachments/assets/6b3cdab3-8ebe-41ae-92ed-5c987111640c" height="55" alt="TypeScript" />
+&nbsp;&nbsp;&nbsp;&nbsp;
+<img src="https://github.com/user-attachments/assets/8e0dcc83-c6eb-4235-a9ea-d41580d3020a" height="55" alt="WebRTC" />
+&nbsp;&nbsp;&nbsp;&nbsp;
+<img src="https://github.com/user-attachments/assets/88de3842-b480-4cbe-b985-8521ba134e27" height="55" alt="GStreamer" />
+
+</div>
 
 ## Development Setup
 
@@ -139,112 +187,20 @@ Grant Accessibility permission to your terminal/IDE in System Settings → Priva
 
 ---
 
-## Expected Architecture
+## Architecture
+<img width="1280" height="946" alt="Chart 1 (1)" src="https://github.com/user-attachments/assets/335632e6-de89-41fa-b9a7-fe222548e578" />
 
-The diagram below describes the full end-to-end architecture after migrating from WebSocket to HTTP + WebRTC.
+### At a glance
 
-> The following diagram is AI generated and may not be accurate
+- **Host / Application** — Runs Rein and coordinates the required services.
+- **Server** — Handles client connections and communication with the host.
+- **Client / Viewer** — Browser-based interface used to control and interact with the host.
+- **GStreamer** — Handles screen capture and streaming.
+- **Input Manager / Drivers** — Converts remote input into platform-specific system input.
+- **WebRTC** — Provides real-time communication for input and media.
+- **HTTP** — Used during the connection setup and handshake.
+- **FTP / File Transfer** — Handles file transfers between the client and host.
 
-```mermaid
-flowchart TD
-    subgraph DESKTOP["🖥️ Desktop (Server)"]
-        subgraph WRAPPER["Desktop App Wrapper\n(Electron / Tauri)"]
-            MAIN["App Process\nSpawns HTTP server\nPolls until ready\nOpens browser window"]
-            RENDERER["Embedded Browser Window\nHosts Settings UI\nWebRTC peer endpoint"]
-        end
-
-        subgraph NITRO["Nitro / Node.js HTTP Server"]
-            direction TB
-            IP_DETECT["IP Detection\ndgram UDP socket\nconnects to 1.1.1.1:1\nreads socket.address()\n→ LAN IP (no packets sent)"]
-            HTTP_ROUTES["HTTP API\nGET  /api/ip\nPOST /api/token\nPOST /api/config\nPOST /api/signal\nGET  /api/signal/ice (SSE)"]
-            TOKEN_STORE["Token Store\nGenerate / validate\nauth tokens"]
-            INPUT_HANDLER["Input Handler\nThrottle + dispatch\nOS-level injection"]
-        end
-
-        IP_DETECT -->|"resolved LAN IP"| HTTP_ROUTES
-        HTTP_ROUTES --> TOKEN_STORE
-        HTTP_ROUTES -->|"input events"| INPUT_HANDLER
-        MAIN -->|"spawns + polls HTTP"| NITRO
-        MAIN -->|"opens"| RENDERER
-    end
-
-    subgraph PHONE["📱 Phone (Client Browser)"]
-        direction TB
-
-        subgraph SETTINGS_PAGE["Settings Page"]
-            SRV_SETTINGS["Server Settings\nPort\nServer IP"]
-            CLIENT_SETTINGS["Client Settings\nMouse sensitivity\nScroll invert\nTheme"]
-            QR_CODE["QR Code\nEncodes trackpad URL\nwith auth token"]
-        end
-
-        subgraph TRACKPAD_PAGE["Trackpad Page"]
-            TOUCH_AREA["Touch Area\nMouse movement\nClick / scroll / zoom"]
-            EXTRA_KEYS["Extra Keys\nArrows, Fn, modifiers"]
-            KBD["Mobile Keyboard\nText input\nComposition support"]
-            SCREEN_MIRROR["Screen Mirror\nVideo element\nP2P stream"]
-        end
-
-        CONN_PROVIDER["ConnectionProvider\nRTCPeerConnection\nDataChannels"]
-    end
-
-    subgraph WEBRTC["⚡ WebRTC P2P"]
-        DC_UNORDERED["DataChannel — unordered\nmove · scroll · zoom\nUDP-like, drop old events"]
-        DC_ORDERED["DataChannel — ordered\nkey · text · combo · clipboard\nTCP-like, reliable"]
-        MEDIA_TRACK["MediaTrack — video\nH.264 / VP9 / AV1\nHardware encoded\nAdaptive bitrate"]
-    end
-
-    %% ── Boot & IP ────────────────────────────────────────────────────
-    MAIN -->|"1. spawn"| NITRO
-    NITRO -->|"ready"| MAIN
-    RENDERER -->|"2. GET /api/ip"| HTTP_ROUTES
-    HTTP_ROUTES -->|"{ ip: 192.168.x.x }"| RENDERER
-
-    %% ── Token / QR ───────────────────────────────────────────────────
-    RENDERER -->|"3. POST /api/token\n(localhost only)"| HTTP_ROUTES
-    HTTP_ROUTES -->|"{ token }"| RENDERER
-    RENDERER -->|"QR url"| QR_CODE
-
-    %% ── Phone connects ───────────────────────────────────────────────
-    QR_CODE -->|"4. scan → open URL\n?token=…"| CONN_PROVIDER
-    CONN_PROVIDER -->|"POST /api/signal offer"| HTTP_ROUTES
-    HTTP_ROUTES -->|"SDP answer + ICE (SSE)"| CONN_PROVIDER
-
-    %% ── WebRTC P2P ───────────────────────────────────────────────────
-    CONN_PROVIDER <-->|"5. P2P established"| RENDERER
-    CONN_PROVIDER --- DC_UNORDERED
-    CONN_PROVIDER --- DC_ORDERED
-    RENDERER --- MEDIA_TRACK
-
-    %% ── Input path ───────────────────────────────────────────────────
-    TOUCH_AREA -->|"move / scroll / zoom"| DC_UNORDERED
-    EXTRA_KEYS -->|"key / combo"| DC_ORDERED
-    KBD -->|"text / backspace"| DC_ORDERED
-    DC_UNORDERED -->|"forwarded"| INPUT_HANDLER
-    DC_ORDERED -->|"forwarded"| INPUT_HANDLER
-
-    %% ── Screen mirror ────────────────────────────────────────────────
-    RENDERER -->|"getDisplayMedia() stream"| MEDIA_TRACK
-    MEDIA_TRACK -->|"P2P — server never sees frames"| SCREEN_MIRROR
-
-    %% ── Client settings (local only) ─────────────────────────────────
-    CLIENT_SETTINGS -->|"persisted in localStorage\nno server call"| CLIENT_SETTINGS
-
-    %% ── Port/config change ───────────────────────────────────────────
-    SRV_SETTINGS -->|"6. POST /api/config\n{ frontendPort }"| HTTP_ROUTES
-    HTTP_ROUTES -->|"writes server-config.json"| NITRO
-    SRV_SETTINGS -->|"redirect to new port URL"| PHONE
-```
-
-### Flow summary
-
-| Step | What happens |
-|---|---|
-| **Boot** | The desktop app wrapper spawns the Nitro HTTP server and polls until it responds, then opens the embedded browser window pointing to `localhost`. |
-| **IP detection** | On startup the server opens a `dgram` UDP socket and "connects" it to `1.1.1.1:1` — no packets are sent, but the OS selects the correct outbound NIC. `socket.address()` returns the LAN IP. |
-| **Token / QR** | The Settings page calls `POST /api/token` (localhost only). A signed token is generated, stored, and encoded into the QR code URL (`/trackpad?token=…`). |
-| **Phone connects** | Phone scans QR → opens `/trackpad?token=…` → `ConnectionProvider` initiates WebRTC signalling via `POST /api/signal` + SSE ICE candidates. |
-| **WebRTC P2P** | Once ICE completes, all real-time data flows peer-to-peer: an unordered DataChannel (UDP-like) for mouse/scroll/zoom and an ordered DataChannel (TCP-like) for keys/text/clipboard. |
-| **Screen mirroring** | `getDisplayMedia()` feeds a MediaTrack directly into the `RTCPeerConnection`. The phone renders it in a `<video>` element. The server never handles video frames. |
-| **Client settings** | Sensitivity, scroll invert, and theme are stored in `localStorage` on the phone only — no server round-trip. |
-| **Server settings** | Port changes call `POST /api/config`, which writes `server-config.json`. The client redirects to the new port URL. The change is picked up on the next server start. |
-| **Input injection** | Input events arrive at the server via the DataChannel bridge, dispatched through `InputHandler` (throttle + validation), and injected at OS level via a virtual input device. |
+For a deeper look at the architecture, communication flow, WebRTC,
+screen capture, input handling, and platform-specific implementation,
+see the **[Rein Wiki](../../wiki)**.
